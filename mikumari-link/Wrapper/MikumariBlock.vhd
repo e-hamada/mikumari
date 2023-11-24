@@ -101,7 +101,6 @@ architecture Behavioral of MikumariBlock is
   signal sync_reset           : std_logic;
   constant kWidthResetSync    : integer:= 16;
   signal reset_shiftreg       : std_logic_vector(kWidthResetSync-1 downto 0);
-  signal sync_reset           : std_logic;
 
   -- CBT --
   signal cbt_lane_up          : std_logic;
