@@ -158,13 +158,16 @@ begin
       rx_output(i)   <= iserdes_q(kDevW-i-1);
   end generate;
 
-  u_polarity :
-    if kRxPolarity generate
+  gen_invout : if kRxPolarity = TRUE generate
+  begin
       dOutToDevice  <= not rx_output;
       cdOutFromO    <= not mod_clock;
-    else generate
+  end generate;
+
+  gen_out : if kRxPolarity = FALSE generate
+  begin
       dOutToDevice  <= rx_output;
       cdOutFromO    <= mod_clock;
-    end generate;
+  end generate;
 
 end RTL;

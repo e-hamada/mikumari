@@ -75,12 +75,15 @@ begin
                        wfPattern      when(selMode = kNormalTx) else
                        wfPattern;
 
-  gen_polarity :
-    if kTxPolarity generate
-      din_oserdes   <= original_pattern xor kInverse;
-    else generate
+  gen_invin : if kTxPolarity = TRUE generate
+  begin
+    din_oserdes   <= original_pattern xor kInverse;
+  end generate;
+
+  gen_in : if kTxPolarity = FALSE generate
+  begin
       din_oserdes   <= original_pattern;
-    end generate;
+  end generate;
 
   gen_cdcm10 : if kCdcmModWidth = 10 generate
     u_cdcm_tx_oserdes : entity mylib.CdcmTxImpl

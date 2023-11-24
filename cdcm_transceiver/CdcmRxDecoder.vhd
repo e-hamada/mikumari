@@ -10,7 +10,7 @@ entity CdcmRxDecoder is
   (
     kNumEncodeBits  : integer:= 2;  -- 1:CDCM-10-1.5 or 2:CDCM-10-2.5
     kNumCharBits    : integer:= 10;
-    kRefPattern     : std_logic_vector(kNumCharBits-1 downto 0):= kTTypeCharInit1_2P5
+    kRefPattern     : CbtCharType:= kTTypeCharInit1_2P5
                                         -- Used as a reference bit pattern to align decoded data
   );
   port
