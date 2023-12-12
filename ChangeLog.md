@@ -1,0 +1,1 @@
+- 2023/12/12 (v1.1) Add pwrOnRst input to CBT. It resets the logics driven by clkIndep and clkIdelayRef.
