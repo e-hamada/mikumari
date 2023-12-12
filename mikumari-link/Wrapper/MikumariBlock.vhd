@@ -44,6 +44,7 @@ entity MikumariBlock is
   Port (
     -- System ports -----------------------------------------------------------
     rst           : in std_logic;          -- Asynchronous reset input
+    pwrOnRst      : in std_logic;          -- Reset logics driven by clkIndep and clkIdctrl
     clkSer        : in std_logic;          -- Slow clock
     clkPar        : in std_logic;          -- Fast clock
     clkIndep      : in std_logic;          -- Independent clock for monitor in CBT
@@ -155,6 +156,7 @@ begin
     (
       -- SYSTEM port --
       srst          => sync_reset,
+      pwrOnRst      => pwrOnRst,
       clkSer        => clkSer,
       clkPar        => clkPar,
       clkIndep      => clkIndep,
