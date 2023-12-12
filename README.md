@@ -1,7 +1,9 @@
 # MIKUMARI
 Official repository of MIKUMARI.
 
-Current version: 1.0
+Current version: 1.1
+
+[Change log](ChangeLog.md)
 
 ## [User Guide](https://ryotarohonda.github.io/ug-mikumari/)
 
