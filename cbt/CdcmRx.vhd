@@ -39,7 +39,8 @@ entity CdcmRx is
   port
   (
     -- SYSTEM port --
-    srst          : in std_logic; -- Asynchronous assert, synchronous de-assert reset. (active high)
+    srst          : in std_logic; -- Reset logics driven by clkPar. Transceiver function reset. (active high)
+    pwrOnRst      : in std_logic; -- Reset logics driven by clkIndep and clkIdelayRef. (active high)
     clkSer        : in std_logic; -- From BUFG (5 x clkPar freq.)
     clkPar        : in std_logic; -- From BUFG
     clkIdelayRef  : in std_logic; -- 200 MHz ref. clock.
@@ -138,7 +139,7 @@ begin
       port map (
         RDY     => ready_ctrl,
         REFCLK  => clkIdelayRef,
-        RST     => srst
+        RST     => pwrOnRst
       );
 
     rst_all  <= srst or (not ready_ctrl);

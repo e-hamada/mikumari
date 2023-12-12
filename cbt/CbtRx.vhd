@@ -28,7 +28,8 @@ entity CbtRx is
   port
   (
     -- SYSTEM port --
-    srst          : in std_logic; -- Asynchronous assert, synchronous de-assert reset. (active high)
+    srst          : in std_logic; -- Reset logics driven by clkPar. Transceiver function reset. (active high)
+    pwrOnRst      : in std_logic; -- Reset logics driven by clkIndep and clkIdelayRef. (active high)
     clkSer        : in std_logic; -- From BUFG (5 x clkPar freq.)
     clkPar        : in std_logic; -- From BUFG
     clkIdelayRef  : in std_logic; -- REFCLK input for IDELAYCTRL
@@ -457,6 +458,7 @@ begin
     (
       -- SYSTEM port --
       srst          => srst,
+      pwrOnRst      => pwrOnRst,
       clkSer        => clkSer,
       clkPar        => clkPar,
       clkIdelayRef  => clkIdelayRef,

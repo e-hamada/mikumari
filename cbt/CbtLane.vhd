@@ -32,7 +32,8 @@ entity CbtLane is
   port
     (
       -- SYSTEM port --
-      srst          : in std_logic; -- Asyncrhonous assert, syncrhonous deassert reset. (active high)
+      srst          : in std_logic; -- Reset logics driven by clkPar. Transceiver function reset. (active high)
+      pwrOnRst      : in std_logic; -- Reset logics driven by clkIndep and clkIdelayRef. (active high)
       clkSer        : in std_logic; -- From BUFG (5 x clkPar freq.)
       clkPar        : in std_logic; -- From BUFG
       clkIndep      : in std_logic; -- Independent clock for monitor
@@ -194,7 +195,7 @@ begin
       sync_valid      <= sync_valid(kSyncLength-2 downto 0) & valid_cbtrx;
       sync_patterr    <= sync_patterr(kSyncLength-2 downto 0) & patterr_cbtrx;
       sync_lane_up    <= sync_lane_up(kSyncLength-2 downto 0) & lane_up;
-      sync_rst        <= sync_rst(kSyncLength-2 downto 0) & srst;
+      sync_rst        <= sync_rst(kSyncLength-2 downto 0) & pwrOnRst;
     end if;
   end process;
 
