@@ -352,6 +352,7 @@ begin
     (
       -- SYSTEM port --
       srst          => srst,
+      pwrOnRst      => pwrOnRst,
       clkSer        => clkSer,
       clkPar        => clkPar,
       clkIdelayRef  => clkIdelayRef,
