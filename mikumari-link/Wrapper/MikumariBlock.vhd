@@ -57,6 +57,7 @@ entity MikumariBlock is
     RXP           : in std_logic;          -- CDCM RXP port. Connect to toplevel port
     RXN           : in std_logic;          -- CDCM RXN port. Connect to toplevel port
     modClk        : out std_logic;         -- Modulated clock output
+    txBeat        : out std_logic;
 
     -- CBT ports ------------------------------------------------------------
     laneUp        : out std_logic;         -- CBT link connection is established
@@ -67,6 +68,7 @@ entity MikumariBlock is
 
     tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
     bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
+    firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
 
     -- Mikumari ports -------------------------------------------------------
     linkUp        : out std_logic;         -- MIKUMARI link connection is established
@@ -120,6 +122,8 @@ begin
   -- body
   -- ===================================================================================
 
+  txBeat        <= tx_beat;
+
   laneUp        <= cbt_lane_up;
 
   idelayErr     <= idelay_error;
@@ -168,6 +172,7 @@ begin
       cbtLaneUp     => cbt_lane_up,
       tapValueOut   => tapValueOut,
       bitslipNum    => bitslipNum,
+      firstBitPatt  => firstBitPatt,
 
       -- Error --
       patternErr    => pattern_error,

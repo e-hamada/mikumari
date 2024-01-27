@@ -46,6 +46,7 @@ entity CdcmRx is
     clkIdelayRef  : in std_logic; -- 200 MHz ref. clock.
     initIn        : in std_logic; -- Re-do the initialization process. Sync with clkPar.
     tapValueIn    : in std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value input (active when kFixIdelayTap is true)
+    firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
 
     -- Status --
     statusInit    : out RxInitStatusType; -- Status of initialization. Sync with clkPar
@@ -101,6 +102,7 @@ architecture RTL of CdcmRx is
   signal dout_serdes          : CdcmPatternType;
   signal reg_dout_serdes      : CdcmPatternType;
   signal prev_data            : CdcmPatternType;
+  signal first_bit_pattern    : CdcmPatternType;
 
   signal en_bitslip           : std_logic;
   signal en_idle_check        : std_logic;
@@ -128,8 +130,9 @@ begin
   --                                 body
   -- ======================================================================
 
-  payloadOut  <= reg_dout_serdes(kPaylowdPos'range);
-  tapValueOut <= tap_value_out;
+  payloadOut    <= reg_dout_serdes(kPaylowdPos'range);
+  tapValueOut   <= tap_value_out;
+  firstBitPatt  <= first_bit_pattern;
 
   -- ISerDes implementation ---------------------------------------------------------
   gen_idelayctrl : if genIDELAYCTRL = TRUE generate
@@ -410,6 +413,7 @@ begin
               end if;
 
             when IdelayAdjusted =>
+              first_bit_pattern   <= reg_dout_serdes;
               idelay_tap_load     <= '0';
 
             when IdelayFailure =>

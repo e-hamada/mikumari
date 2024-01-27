@@ -45,6 +45,7 @@ entity CbtLane is
       cbtLaneUp     : out std_logic; -- Indicates that CBT is ready for communication
       tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
       bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
+      firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
 
       -- Error --
       patternErr    : out std_logic; -- Indicates CDCM waveform pattern is collapsed.
@@ -358,6 +359,7 @@ begin
       clkIdelayRef  => clkIdelayRef,
       initIn        => init_cdcm_rx,
       tapValueIn    => tapValueIn,
+      firstBitPatt  => firstBitPatt,
 
       -- Status --
       decoderReady  => decoder_bit_aligned,
