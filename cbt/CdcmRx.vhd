@@ -413,7 +413,6 @@ begin
               end if;
 
             when IdelayAdjusted =>
-              first_bit_pattern   <= reg_dout_serdes;
               idelay_tap_load     <= '0';
 
             when IdelayFailure =>
@@ -468,6 +467,7 @@ begin
         num_patt_check  := 0;
         en_bitslip      <= '0';
         bit_aligned     <= '0';
+        first_bit_pattern <= (others => '0');
 
         state_bitslip   <= Init;
 
@@ -478,8 +478,9 @@ begin
 
           when WaitStart =>
             if(idelay_is_adjusted = '1') then
-              en_idle_check   <= '1';
-              state_bitslip   <= CheckIdlePatt;
+              first_bit_pattern   <= reg_dout_serdes;
+              en_idle_check       <= '1';
+              state_bitslip       <= CheckIdlePatt;
             end if;
 
           when CheckIdlePatt =>
