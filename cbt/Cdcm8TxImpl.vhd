@@ -43,6 +43,7 @@ architecture RTL of Cdcm8TxImpl is
 
   attribute mark_debug  : string;
   attribute mark_debug of rx_output : signal is "true";
+  attribute mark_debug of din_oserdes : signal is "true";
 
 begin
 

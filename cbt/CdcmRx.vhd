@@ -281,6 +281,7 @@ begin
 
     u_idelay_sm : process(serdes_reset, clkPar)
       variable elapsed_time           : integer range 0 to kMaxIdelayCheck;
+      variable wait_count             : integer range 0 to kLoadWait;
     begin
       if(clkPar'event and clkPar = '1') then
         if(serdes_reset = '1') then
@@ -302,12 +303,19 @@ begin
 
             when Increment =>
               elapsed_time    := 0;
-              en_idelay_check <= '1';
               idelay_tap_load <= '1';
-              state_idelay    <= Check;
+              wait_count      := kLoadWait-1;
+              state_idelay    <= WaitState;
+
+            when WaitState =>
+              idelay_tap_load <= '0';
+              if(wait_count = 0) then
+                en_idelay_check <= '1';
+                state_idelay    <= Check;
+              end if;
+              wait_count  := wait_count-1;
 
             when Check =>
-              idelay_tap_load   <= '0';
               elapsed_time      := elapsed_time +1;
               if(idelay_check_count = kSuccThreshold) then
                 state_idelay      <= IdelayAdjusted;
@@ -344,6 +352,7 @@ begin
       variable num_idelay_check       : integer range 0 to kNumTaps;
       variable elapsed_time           : integer range 0 to kMaxIdelayCheck;
       variable decrement_count        : integer range 0 to kNumTaps-1;
+      variable wait_count             : integer range 0 to kLoadWait;
     begin
       if(clkPar'event and clkPar = '1') then
         if(serdes_reset = '1') then
@@ -399,21 +408,33 @@ begin
               end if;
 
             when Increment =>
-              en_idelay_check <= '1';
               idelay_tap_load <= '1';
-              state_idelay    <= Check;
+              wait_count      := kLoadWait-1;
+              state_idelay    <= WaitState;
 
             when Decrement =>
               tap_value_in    <= tap_value_in -1;
               decrement_count := decrement_count -1;
               if(decrement_count = 0) then
                 idelay_tap_load     <= '1';
-                idelay_is_adjusted  <= '1';
+                wait_count          := kLoadWait-1;
                 state_idelay        <= IdelayAdjusted;
               end if;
 
+            when WaitState =>
+              idelay_tap_load <= '0';
+              if(wait_count = 0) then
+                en_idelay_check <= '1';
+                state_idelay    <= Check;
+              end if;
+              wait_count  := wait_count-1;
+
             when IdelayAdjusted =>
               idelay_tap_load     <= '0';
+              if(wait_count = 0) then
+                idelay_is_adjusted  <= '1';
+              end if;
+              wait_count  := wait_count-1;
 
             when IdelayFailure =>
               -- Abnormal state. Should not fall in this state.
@@ -460,6 +481,7 @@ begin
   u_bitslip_sm : process(serdes_reset, clkPar)
     variable num_patt_check       : integer range 0 to kWidthDev;
     variable elapsed_time         : integer range 0 to kMaxPattCheck;
+    variable wait_count           : integer range 0 to kLoadWait;
   begin
     if(clkPar'event and clkPar = '1') then
       if(serdes_reset = '1') then
@@ -500,9 +522,16 @@ begin
             if(num_patt_check = kWidthDev) then
               state_bitslip <= BitslipFailure;
             else
+              wait_count    := kLoadWait-1;
+              state_bitslip <= WaitState;
+            end if;
+
+          when WaitState =>
+            if(wait_count = 0) then
               elapsed_time  := 0;
               state_bitslip <= CheckIdlePatt;
             end if;
+            wait_count  := wait_count-1;
 
           when BitslipFinished =>
             null;

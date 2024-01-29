@@ -41,6 +41,7 @@ package defCDCM is
   constant kMaxIdelayCheck  : integer:= 4096; --256;
   constant kSuccThreshold   : integer:= 4000; --230;
   --constant kWidthCheckCount : integer:= 8;
+  constant kLoadWait        : integer:= 4;
 
   function GetTapDelay(freq_idelayctrl_ref : real) return real;
   function GetPlateauLength(tap_delay       : real;
@@ -53,6 +54,7 @@ package defCDCM is
     NumTrialCheck,
     Increment,
     Decrement,
+    WaitState,
     IdelayAdjusted,
     IdelayFailure
     );
@@ -70,6 +72,7 @@ package defCDCM is
     CheckIdlePatt,
     --NumTrialCheck,
     BitSlip,
+    WaitState,
     BitslipFinished,
     BitslipFailure
     );
