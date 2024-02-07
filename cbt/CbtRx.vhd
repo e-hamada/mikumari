@@ -370,7 +370,7 @@ begin
 
             when SendTCharI1  =>
               initial_timer   := initial_timer -1;
-              if(valid_out = '1' and character_out = GetInit2Char(kNumCbtCharBits)) then
+              if(valid_out = '1' and character_out = GetInit2Char(kNumEncodeBits)) then
                 back_ch_inst  <= SendTCharI2;
               elsif(initial_timer = 0) then
                 self_init     <= '1';
@@ -380,7 +380,7 @@ begin
 
             when SendTCharI2 =>
               initial_timer   := initial_timer -1;
-              if(valid_out = '1' and character_out /= GetInit2Char(kNumCbtCharBits)) then
+              if(valid_out = '1' and character_out /= GetInit2Char(kNumEncodeBits)) then
                 match_count  := match_count +1;
               end if;
 

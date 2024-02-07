@@ -57,7 +57,7 @@ begin
   end generate;
 
   -- Generate encoder ------------------------------------------------------------------
-  gen_cdcm_10b_1p5b : if kNumEncodeBits = 1 generate
+  gen_cdcm_1p5b : if kNumEncodeBits = 1 generate
   begin
     payload   <=  "0011" when(reg_valid = '0') else
                   "0001" when(reg_valid = '1' and data_array(index_array) = "0") else
@@ -65,7 +65,7 @@ begin
                   "0011";
   end generate;
 
-  gen_cdcm_10b_2p5b : if kNumEncodeBits = 2 generate
+  gen_cdcm_2p5b : if kNumEncodeBits = 2 generate
   begin
     payload   <=  "0011" when(reg_valid = '0') else
                   "0000" when(reg_valid = '1' and data_array(index_array) = "00") else

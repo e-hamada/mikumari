@@ -80,7 +80,7 @@ begin
   en_align_process  <= enBitAlign;
 
   -- Generate decoder ------------------------------------------------------------------
-  gen_cdcm_10b_1p5b : if kNumEncodeBits = 1 generate
+  gen_cdcm_1p5b : if kNumEncodeBits = 1 generate
   begin
     decoded_payload   <=  "0" when(payload = "0001") else
                           "1" when(payload = "0111") else
@@ -94,7 +94,7 @@ begin
                           '1';
   end generate;
 
-  gen_cdcm_10b_2p5b : if kNumEncodeBits = 2 generate
+  gen_cdcm_2p5b : if kNumEncodeBits = 2 generate
   begin
     decoded_payload   <=  "00" when(payload = "0000") else
                           "01" when(payload = "0001") else

@@ -41,9 +41,29 @@ architecture RTL of Cdcm8TxImpl is
   signal iserdes_q    : std_logic_vector(13 downto 0);
   signal rx_output    : std_logic_vector(dInFromDevice'range);
 
+  component EdgeDetector is
+    port (
+      rst         : in std_logic;
+      clk         : in std_logic;
+      dIn         : in std_logic;
+      dOut        : out std_logic
+      );
+  end component;
+
+  COMPONENT vio_0
+  PORT (
+    clk : IN STD_LOGIC;
+    probe_out0 : OUT STD_LOGIC_VECTOR(0 DOWNTO 0)
+  );
+  END COMPONENT;
+
+  signal test_bitslip : std_logic;
+  signal vio_out      : std_logic_vector(0 downto 0);
+
   attribute mark_debug  : string;
   attribute mark_debug of rx_output : signal is "true";
   attribute mark_debug of din_oserdes : signal is "true";
+  attribute mark_debug of test_bitslip : signal is "true";
 
 begin
 
@@ -108,7 +128,7 @@ begin
   u_swap : for i in 0 to kDevW-1 generate
   begin
     din_oserdes(kMaxBit-i-1)     <= dInFromDevice(i);
-    rx_output(i)   <= iserdes_q(kDevW-i-1);
+    rx_output(i)   <= iserdes_q(i);
   end generate;
   din_oserdes(kMaxBit-kDevW-1 downto 0)  <= (others => '0');
 
@@ -142,7 +162,7 @@ begin
        -- SHIFTOUT1, SHIFTOUT2: 1-bit (each) output: Data width expansion output ports
        SHIFTOUT1 => open,
        SHIFTOUT2 => open,
-       BITSLIP => '0',           -- 1-bit input: The BITSLIP pin performs a Bitslip operation synchronous to
+       BITSLIP => test_bitslip,           -- 1-bit input: The BITSLIP pin performs a Bitslip operation synchronous to
                                      -- CLKDIV when asserted (active High). Subsequently, the data seen on the
                                      -- Q1 to Q8 output ports will shift, as in a barrel-shifter operation, one
                                      -- position every time Bitslip is invoked (DDR operation is different from
@@ -169,6 +189,14 @@ begin
        -- SHIFTIN1, SHIFTIN2: 1-bit (each) input: Data width expansion input ports
        SHIFTIN1 => '0',
        SHIFTIN2 => '0'
+    );
+
+  u_os : EdgeDetector port map('0', clkDivIn, vio_out(0), test_bitslip);
+
+  u_vio : vio_0
+    PORT MAP (
+      clk => clkDivIn,
+      probe_out0 => vio_out
     );
 
 
