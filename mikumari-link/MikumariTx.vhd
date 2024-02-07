@@ -236,10 +236,10 @@ begin
         if(instRx = WaitCbtUp and cbtTxBeat = '1') then
           tx_flag(kInitMikuTx.index)  <= '0';
         elsif(instRx = SendInitK1 and cbtTxBeat = '1') then
-          init_ktype_char   <= GetInitK1(kNumCbtCharBits);
+          init_ktype_char   <= GetInitK1(kNumEncodeBits);
           tx_flag(kInitMikuTx.index)  <= '1';
         elsif(instRx = SendInitK2 and cbtTxBeat = '1') then
-          init_ktype_char   <= GetInitK2(kNumCbtCharBits);
+          init_ktype_char   <= GetInitK2(kNumEncodeBits);
           tx_flag(kInitMikuTx.index)  <= '1';
         elsif(instRx = MikumariRxUp and cbtTxBeat = '1') then
           tx_flag(kInitMikuTx.index)  <= '0';
