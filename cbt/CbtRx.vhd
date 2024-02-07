@@ -291,7 +291,7 @@ begin
 
             when SendTCharI2 =>
               initial_timer   := initial_timer -1;
-              if(valid_out = '1' and character_out = GetInit2Char(kNumCbtCharBits)) then
+              if(valid_out = '1' and character_out = GetInit2Char(kNumEncodeBits)) then
                 match_count       := match_count +1;
               end if;
 
