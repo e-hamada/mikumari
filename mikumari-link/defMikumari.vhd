@@ -29,12 +29,13 @@ package defMikumari is
 
   -- Mikumari Pulse --
   subtype  MikumariPulseType        is std_logic_vector(2 downto 0);
-  subtype  MikumariEncodedPulseType is std_logic_vector(3 downto 0);
-  constant kWidthPulseCount       : positive:= 4;
-  constant kWidthPulseSr          : positive:= 10;
+  subtype  EncodedPulseType         is std_logic_vector(3 downto 0);
+  constant kIsPulseIndex          : integer:= MikumariPulseType'high +1;
+  constant kWidthPulseCount       : integer:= 4;
+  constant kWidthPulseSr          : integer:= 10;
 
   -- Check sum --
-  constant kWidthCheckSum         : positive:= 8;
+  constant kWidthCheckSum         : integer:= 8;
 
   -- Mikumari TX --
   constant kNumTxFlag         : integer:= 11;
@@ -57,15 +58,23 @@ package defMikumari is
 
   function isBusyTx(tx_flag : std_logic_vector(kNumTxFlag-1 downto 0)) return std_logic;
   function isBusyIFBuf(tx_flag : std_logic_vector(kNumTxFlag-1 downto 0)) return std_logic;
-  function encodePulseType(pulse_type : MikumariPulseType) return MikumariEncodedPulseType;
+  function encodePulseType(pulse_type : MikumariPulseType) return EncodedPulseType;
 
-  constant kWidthLinkDelay  : positive:= 64;
+  constant kWidthLinkDelay  : integer:= 64;
 
   -- Mikumari RX --
   function isPulseChar(cbt_data : CbtUDataType; is_ktype  : std_logic) return std_logic;
-  function decodePulseType(cbt_data : CbtUDataType) return MikumariPulseType;
+  function decodePulseType(cbt_data : CbtUDataType) return std_logic_vector;
 
   -- High-precision pulse mode --
+  subtype  MikumariHpmRegType       is std_logic_vector(3 downto 0);
+  subtype  EncodedHpmPulseType      is std_logic_vector(5 downto 0);
+  constant kWidthPulseReg  : integer:= 4;
+
+  subtype  HpmPulseMessageType      is std_logic_vector(kWidthPulseCount+kWidthPulseReg-1 downto 0);
+  constant kPosPulseCount   : std_logic_vector(7 downto 4):= X"0";
+  constant kPosPulseReg     : std_logic_vector(3 downto 0):= X"0";
+
   function encodePulseTypeHPM(pulse_type : MikumariPulseType; rd_flag : std_logic) return std_logic_vector;
   function decodePulseTypeHPM_RDM(cbt_data : CbtUDataType) return std_logic_vector;
   function decodePulseTypeHPM_RDP(cbt_data : CbtUDataType) return std_logic_vector;
@@ -113,8 +122,7 @@ package body defMikumari is
   end isBusyIFBuf;
 
   -- Low latency mode -----------------------------------------------------------------------
-  function encodePulseType(pulse_type : MikumariPulseType) return MikumariEncodedPulseType is
---    variable  result  : MikumariEncodedPulseType;
+  function encodePulseType(pulse_type : MikumariPulseType) return EncodedPulseType is
   begin
     case pulse_type is
       when "000" => return "1010";
@@ -127,25 +135,13 @@ package body defMikumari is
       when "111" => return "1100";
       when others => return "1001";
     end case;
-
---    result  := "1010" when(pulse_type = "000") else
---               "1110" when(pulse_type = "001") else
---               "1011" when(pulse_type = "010") else
---               "1101" when(pulse_type = "011") else
---               "0111" when(pulse_type = "100") else
---               "1001" when(pulse_type = "101") else
---               "0110" when(pulse_type = "110") else
---               "1100" when(pulse_type = "111") else "1001";
---
---    return result;
   end encodePulseType;
 
   -- Mikumari RX --------------------------------------------------------------------
   function isPulseChar(cbt_data : CbtUDataType; is_ktype : std_logic) return std_logic is
---    variable result   : std_logic;
   begin
     if(is_ktype = '1') then
-      case pulse_type(CbtUDataType'left downto 4) is
+      case cbt_data(CbtUDataType'left downto 4) is
         when "1010" => return '1';
         when "1110" => return '1';
         when "1011" => return '1';
@@ -159,43 +155,21 @@ package body defMikumari is
     else
       return '0';
     end if;
---    result  := '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1010") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1110") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1011") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1101") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "0111") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1001") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "0110") else
---               '1' when(is_ktype = '1' and cbt_data(CbtUDataType'left downto 4) = "1100") else '0';
---
---    return result;
   end isPulseChar;
 
-  function decodePulseType(cbt_data : CbtUDataType) return MikumariPulseType is
---    variable result   : MikumariPulseType;
+  function decodePulseType(cbt_data : CbtUDataType) return std_logic_vector is
   begin
-    case pulse_type(CbtUDataType'left downto 4) is
-      when "1010" => return "000";
-      when "1110" => return "001";
-      when "1011" => return "010";
-      when "1101" => return "011";
-      when "0111" => return "100";
-      when "1001" => return "101";
-      when "0110" => return "110";
-      when "1100" => return "111";
-      when others => return "000";
+    case cbt_data(CbtUDataType'left downto 4) is
+      when "1010" => return "1000";
+      when "1110" => return "1001";
+      when "1011" => return "1010";
+      when "1101" => return "1011";
+      when "0111" => return "1100";
+      when "1001" => return "1101";
+      when "0110" => return "1110";
+      when "1100" => return "1111";
+      when others => return "0000";
     end case;
-
---    result  := "000" when(cbt_data(CbtUDataType'left downto 4) = "1010") else
---               "001" when(cbt_data(CbtUDataType'left downto 4) = "1110") else
---               "010" when(cbt_data(CbtUDataType'left downto 4) = "1011") else
---               "011" when(cbt_data(CbtUDataType'left downto 4) = "1101") else
---               "100" when(cbt_data(CbtUDataType'left downto 4) = "0111") else
---               "101" when(cbt_data(CbtUDataType'left downto 4) = "1001") else
---               "110" when(cbt_data(CbtUDataType'left downto 4) = "0110") else
---               "111" when(cbt_data(CbtUDataType'left downto 4) = "1100") else "000";
---
---    return result;
   end decodePulseType;
 
   -- High precision mode --------------------------------------------------------------------
@@ -236,31 +210,31 @@ package body defMikumari is
 
   function decodePulseTypeHPM_RDM(cbt_data : CbtUDataType) return std_logic_vector is
   begin
-    case pulse_type(CbtUDataType'left downto 2) is
-      when "101111" => return "0000";
-      when "110011" => return "0001";
-      when "101101" => return "0010";
-      when "100111" => return "0011";
-      when "011110" => return "0100";
-      when "001111" => return "0101";
-      when "011011" => return "0110";
-      when "110111" => return "0111";
-      when others   => return "1000"; -- RD seems to be plus --
+    case cbt_data(CbtUDataType'left downto 2) is
+      when "101111" => return "1000";
+      when "110011" => return "1001";
+      when "101101" => return "1010";
+      when "100111" => return "1011";
+      when "011110" => return "1100";
+      when "001111" => return "1101";
+      when "011011" => return "1110";
+      when "110111" => return "1111";
+      when others   => return "0000"; -- RD seems to be plus --
     end case;
   end decodePulseTypeHPM_RDM;
 
   function decodePulseTypeHPM_RDP(cbt_data : CbtUDataType) return std_logic_vector is
   begin
-    case pulse_type(CbtUDataType'left downto 2) is
-      when "010011" => return "0000";
-      when "110011" => return "0001";
-      when "101101" => return "0010";
-      when "100111" => return "0011";
-      when "011110" => return "0100";
-      when "001111" => return "0101";
-      when "011011" => return "0110";
-      when "001011" => return "0111";
-      when others   => return "1000"; -- RD seems to be minus --
+    case cbt_data(CbtUDataType'left downto 2) is
+      when "010011" => return "1000";
+      when "110011" => return "1001";
+      when "101101" => return "1010";
+      when "100111" => return "1011";
+      when "011110" => return "1100";
+      when "001111" => return "1101";
+      when "011011" => return "1110";
+      when "001011" => return "1111";
+      when others   => return "0000"; -- RD seems to be minus --
     end case;
   end decodePulseTypeHPM_RDP;
 
@@ -300,30 +274,30 @@ package body defMikumari is
   function decode3b4b_RDM(data_in : std_logic_vector) return std_logic_vector is
   begin
     case data_in is
-      when "0100" => return "0000";
-      when "1001" => return "0001";
-      when "1100" => return "0010";
-      when "0011" => return "0011";
-      when "0010" => return "0100";
-      when "1000" => return "0101";
-      when "0110" => return "0110";
-      when "0001" => return "0111";
-      when others => return "1000"; -- RD seems to be plus --
+      when "0100" => return "1000";
+      when "1001" => return "1001";
+      when "1100" => return "1010";
+      when "0011" => return "1011";
+      when "0010" => return "1100";
+      when "1000" => return "1101";
+      when "0110" => return "1110";
+      when "0001" => return "1111";
+      when others => return "0000"; -- RD seems to be plus --
     end case;
   end decode3b4b_RDM;
 
   function decode3b4b_RDP(data_in : std_logic_vector) return std_logic_vector is
   begin
     case data_in is
-      when "1011" => return "0000";
-      when "1001" => return "0001";
-      when "1100" => return "0010";
-      when "0011" => return "0011";
-      when "1101" => return "0100";
-      when "0111" => return "0101";
-      when "0110" => return "0110";
-      when "1110" => return "0111";
-      when others => return "1000"; -- RD seems to be minus --
+      when "1011" => return "1000";
+      when "1001" => return "1001";
+      when "1100" => return "1010";
+      when "0011" => return "1011";
+      when "1101" => return "1100";
+      when "0111" => return "1101";
+      when "0110" => return "1110";
+      when "1110" => return "1111";
+      when others => return "0000"; -- RD seems to be minus --
     end case;
   end decode3b4b_RDP;
 
@@ -344,7 +318,7 @@ package body defMikumari is
         --
         when "01000" =>  return "111001";
         when "01001" =>  return "100101";
-        when "01010" =>  return "010011";
+        when "01010" =>  return "101000";
         when "01011" =>  return "110100";
         when "01100" =>  return "001101";
         when "01101" =>  return "101100";
@@ -376,7 +350,7 @@ package body defMikumari is
       case data_in is
         when "00000" =>  return "011000";
         when "00001" =>  return "100010";
-        when "00010" =>  return "101101";
+        when "00010" =>  return "010010";
         when "00011" =>  return "110001";
         when "00100" =>  return "001010";
         when "00101" =>  return "101001";
@@ -385,7 +359,7 @@ package body defMikumari is
         --
         when "01000" =>  return "000110";
         when "01001" =>  return "100101";
-        when "01010" =>  return "010011";
+        when "01010" =>  return "010111";
         when "01011" =>  return "110100";
         when "01100" =>  return "001101";
         when "01101" =>  return "101100";
@@ -417,84 +391,84 @@ package body defMikumari is
   function decode5b6b_RDM(data_in : std_logic_vector) return std_logic_vector is
   begin
     case data_in is
-      when "100111" =>  return "000000";
-      when "011101" =>  return "000001";
-      when "101101" =>  return "000010";
-      when "110001" =>  return "000011";
-      when "110101" =>  return "000100";
-      when "101001" =>  return "000101";
-      when "011001" =>  return "000110";
-      when "111000" =>  return "000111";
+      when "100111" =>  return "100000";
+      when "011101" =>  return "100001";
+      when "101101" =>  return "100010";
+      when "110001" =>  return "100011";
+      when "110101" =>  return "100100";
+      when "101001" =>  return "100101";
+      when "011001" =>  return "100110";
+      when "111000" =>  return "100111";
       --
-      when "111001" =>  return "001000";
-      when "100101" =>  return "001001";
-      when "010011" =>  return "001010";
-      when "110100" =>  return "001011";
-      when "001101" =>  return "001100";
-      when "101100" =>  return "001101";
-      when "011100" =>  return "001110";
-      when "010111" =>  return "001111";
+      when "111001" =>  return "101000";
+      when "100101" =>  return "101001";
+      when "101000" =>  return "101010";
+      when "110100" =>  return "101011";
+      when "001101" =>  return "101100";
+      when "101100" =>  return "101101";
+      when "011100" =>  return "101110";
+      when "010111" =>  return "101111";
       --
-      when "011011" =>  return "010000";
-      when "100011" =>  return "010001";
-      when "010011" =>  return "010010";
-      when "110010" =>  return "010011";
-      when "001011" =>  return "010100";
-      when "000111" =>  return "010101";
-      when "011010" =>  return "010110";
-      when "111010" =>  return "010111";
+      when "011011" =>  return "110000";
+      when "100011" =>  return "110001";
+      when "010011" =>  return "110010";
+      when "110010" =>  return "110011";
+      when "001011" =>  return "110100";
+      when "000111" =>  return "110101";
+      when "011010" =>  return "110110";
+      when "111010" =>  return "110111";
       --
-      when "110011" =>  return "011000";
-      when "100110" =>  return "011001";
-      when "010110" =>  return "011010";
-      when "110110" =>  return "011011";
-      when "001110" =>  return "011100";
-      when "101110" =>  return "011101";
-      when "011110" =>  return "011110";
-      when "101011" =>  return "011111";
-      when others   =>  return "100000"; -- RD seems to be plus --
+      when "110011" =>  return "111000";
+      when "100110" =>  return "111001";
+      when "010110" =>  return "111010";
+      when "110110" =>  return "111011";
+      when "001110" =>  return "111100";
+      when "101110" =>  return "111101";
+      when "011110" =>  return "111110";
+      when "101011" =>  return "111111";
+      when others   =>  return "000000"; -- RD seems to be plus --
     end case;
   end decode5b6b_RDM;
 
   function decode5b6b_RDP(data_in : std_logic_vector) return std_logic_vector is
   begin
     case data_in is
-      when "011000" =>  return "000000";
-      when "100010" =>  return "000001";
-      when "101101" =>  return "000010";
-      when "110001" =>  return "000011";
-      when "001010" =>  return "000100";
-      when "101001" =>  return "000101";
-      when "011001" =>  return "000110";
-      when "111000" =>  return "000111";
+      when "011000" =>  return "100000";
+      when "100010" =>  return "100001";
+      when "010010" =>  return "100010";
+      when "110001" =>  return "100011";
+      when "001010" =>  return "100100";
+      when "101001" =>  return "100101";
+      when "011001" =>  return "100110";
+      when "111000" =>  return "100111";
       --
-      when "000110" =>  return "001000";
-      when "100101" =>  return "001001";
-      when "010011" =>  return "001010";
-      when "110100" =>  return "001011";
-      when "001101" =>  return "001100";
-      when "101100" =>  return "001101";
-      when "011100" =>  return "001110";
-      when "101000" =>  return "001111";
+      when "000110" =>  return "101000";
+      when "100101" =>  return "101001";
+      when "010111" =>  return "101010";
+      when "110100" =>  return "101011";
+      when "001101" =>  return "101100";
+      when "101100" =>  return "101101";
+      when "011100" =>  return "101110";
+      when "101000" =>  return "101111";
       --
-      when "100100" =>  return "010000";
-      when "100011" =>  return "010001";
-      when "010011" =>  return "010010";
-      when "110010" =>  return "010011";
-      when "001011" =>  return "010100";
-      when "000111" =>  return "010101";
-      when "011010" =>  return "010110";
-      when "000101" =>  return "010111";
+      when "100100" =>  return "110000";
+      when "100011" =>  return "110001";
+      when "010011" =>  return "110010";
+      when "110010" =>  return "110011";
+      when "001011" =>  return "110100";
+      when "000111" =>  return "110101";
+      when "011010" =>  return "110110";
+      when "000101" =>  return "110111";
       --
-      when "001100" =>  return "011000";
-      when "100110" =>  return "011001";
-      when "010110" =>  return "011010";
-      when "001001" =>  return "011011";
-      when "001110" =>  return "011100";
-      when "010001" =>  return "011101";
-      when "100001" =>  return "011110";
-      when "010100" =>  return "011111";
-      when others   => return  "100000"; -- RD seems to be minus --
+      when "001100" =>  return "111000";
+      when "100110" =>  return "111001";
+      when "010110" =>  return "111010";
+      when "001001" =>  return "111011";
+      when "001110" =>  return "111100";
+      when "010001" =>  return "111101";
+      when "100001" =>  return "111110";
+      when "010100" =>  return "111111";
+      when others   => return  "000000"; -- RD seems to be minus --
     end case;
   end decode5b6b_RDP;
 

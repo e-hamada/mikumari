@@ -11,11 +11,12 @@ entity MikumariTx is
   generic
   (
     -- CBT --
-    kNumEncodeBits   : integer:= 2;
-    -- Scrambler --
-    enScrambler      : boolean:= true;
+    kNumEncodeBits    : integer:= 2;
+    -- MIKUMARI-Link --
+    enScrambler       : boolean:= true;
+    kHighPrecision    : boolean:= false;
     -- DEBUG --
-    enDEBUG          : boolean:= false
+    enDEBUG           : boolean:= false
   );
   port
   (
@@ -33,7 +34,8 @@ entity MikumariTx is
     txAck       : out std_logic;    -- Acknowledge to validIn signal.
 
     pulseIn     : in std_logic;     -- Pulse input. Must be one-shot signal.
-    pulseType   : in MikumariPulseType; -- 3-bit short message to be sent with pulse.
+    pulseType   : in MikumariPulseType;  -- 3-bit short message to be sent with pulse.
+    pulseReg    : in MikumariHpmRegType; -- 4-bit additional message transferred by the pulse
     busyPulseTx : out std_logic;    -- Under transmission of previous pulse. If high, pulseIn is ignored.
 
     -- Back channel --
@@ -81,11 +83,20 @@ architecture RTL of MikumariTx is
 
   -- pulse --
   signal pulse_in             : std_logic;
-  signal reg_pulse_type       : MikumariEncodedPulseType;
+  signal reg_pulse_type       : EncodedPulseType;
   signal pulse_count          : std_logic_vector(kWidthPulseCount-1 downto 0);
   signal pulse_count_delay    : std_logic_vector(pulse_count'range);
   signal reg_pulse_count      : std_logic_vector(pulse_count'range);
   signal pulse_ktype_char     : CbtUDataType;
+  -- High-precision mode --
+  signal reg_pulse_type_hpm   : EncodedHpmPulseType;
+  signal pulse_message        : HpmPulseMessageType;
+  signal encoded_4b           : std_logic_vector(3 downto 0);
+  signal encoded_6b           : std_logic_vector(5 downto 0);
+  signal running_disparity    : std_logic;
+  signal done_1st_char        : std_logic;
+  signal reg_pulse_message    : std_logic_vector(HpmPulseMessageType'high+2 downto 0);
+  signal reg_hpm_pulse_char   : CbtUDataType;
 
   -- Initialize --
   signal reg_uinit            : std_logic_vector(1 downto 0);
@@ -355,31 +366,80 @@ begin
   end process;
 
   -- Pulse K-char generate --
-  u_pulse_gen : process(clkPar, srst)
+  -- Low-Latency Mode (default) --
+  gen_pkc_llm : if kHighPrecision = false generate
   begin
-    if(clkPar'event and clkPar = '1') then
-      if(srst = '1') then
-        tx_flag(kPulseTx.index)       <= '0';
-        tx_flag(kPulseReserve.index)  <= '0';
-      else
-        if(pulse_in = '1') then
-          tx_flag(kPulseReserve.index)   <= '1';
-          reg_pulse_count   <= pulse_count;
-          reg_pulse_type    <= encodePulseType(pulseType);
-        end if;
+    u_pulse_gen : process(clkPar, srst)
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(srst = '1') then
+          tx_flag(kPulseTx.index)       <= '0';
+          tx_flag(kPulseReserve.index)  <= '0';
+        else
+          if(pulse_in = '1') then
+            tx_flag(kPulseReserve.index)   <= '1';
+            reg_pulse_count   <= pulse_count;
+            reg_pulse_type    <= encodePulseType(pulseType);
+          end if;
 
-        if(reg_cbt_tx_beat = '1' and tx_flag(kPulseReserve.index) = '1') then
-          tx_flag(kPulseReserve.index)           <= '0';
-          tx_flag(kPulseTx.index)  <= '1';
-        elsif(tx_flag(kPulseTx.index) = '1' and reg_cbt_tx_ack = '1') then
-          tx_flag(kPulseTx.index)  <= '0';
-        end if;
+          if(reg_cbt_tx_beat = '1' and tx_flag(kPulseReserve.index) = '1') then
+            tx_flag(kPulseReserve.index)           <= '0';
+            tx_flag(kPulseTx.index)  <= '1';
+          elsif(tx_flag(kPulseTx.index) = '1' and reg_cbt_tx_ack = '1') then
+            tx_flag(kPulseTx.index)  <= '0';
+          end if;
 
+        end if;
       end if;
-    end if;
-  end process;
+    end process;
 
-  pulse_ktype_char  <= reg_pulse_type & reg_pulse_count;
+    pulse_ktype_char  <= reg_pulse_type & reg_pulse_count;
+  end generate;
+
+  -- High-Precision Mode (default) --
+  gen_pkc_hpm : if kHighPrecision = true generate
+  begin
+    pulse_message   <= pulse_count & pulseReg;
+    encoded_4b      <= encode3b4b(pulse_message(7 downto 5), running_disparity);
+    encoded_6b      <= encode5b6b(pulse_message(4 downto 0), running_disparity);
+
+    u_pulse_gen : process(clkPar, srst)
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(srst = '1') then
+          tx_flag(kPulseTx.index)       <= '0';
+          tx_flag(kPulseReserve.index)  <= '0';
+          running_disparity             <= '0';
+          done_1st_char                 <= '0';
+        else
+          if(pulse_in = '1') then
+            tx_flag(kPulseReserve.index)   <= '1';
+            reg_pulse_message   <= encoded_6b & encoded_4b;
+            reg_pulse_type_hpm  <= encodePulseTypeHPM(pulseType, running_disparity);
+            running_disparity   <= not running_disparity;
+          end if;
+
+          if(reg_cbt_tx_beat = '1' and tx_flag(kPulseReserve.index) = '1') then
+            tx_flag(kPulseReserve.index)  <= '0';
+            tx_flag(kPulseTx.index)       <= '1';
+            -- 1st K-character --
+            done_1st_char                 <= '0';
+            reg_hpm_pulse_char            <= reg_pulse_type_hpm & reg_pulse_message(9 downto 8);
+          elsif(tx_flag(kPulseTx.index) = '1' and reg_cbt_tx_ack = '1') then
+            done_1st_char                 <= '1';
+            -- 2nd K-character --
+            reg_hpm_pulse_char            <= reg_pulse_message(7 downto 0);
+            if(done_1st_char = '1') then
+              tx_flag(kPulseTx.index) <= '0';
+            end if;
+          end if;
+
+        end if;
+      end if;
+    end process;
+
+    pulse_ktype_char  <= reg_hpm_pulse_char;
+  end generate;
 
   -- Scrambler ------------------------------------------------------------------------------
 

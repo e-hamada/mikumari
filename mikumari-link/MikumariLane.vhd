@@ -11,11 +11,12 @@ entity MikumariLane is
   generic
   (
     -- CBT --
-    kNumEncodeBits   : integer:= 2;
-    -- Scrambler --
-    enScrambler      : boolean:= true;
+    kNumEncodeBits    : integer:= 2;
+    -- MIKUMARI-Link --
+    enScrambler       : boolean:= true;
+    kHighPrecision    : boolean:= false;
     -- DEBUG --
-    enDEBUG          : boolean:= false
+    enDEBUG           : boolean:= false
   );
   port
   (
@@ -34,6 +35,7 @@ entity MikumariLane is
 
     pulseIn       : in std_logic;          -- Pulse input. Must be one-shot signal.
     pulseTypeTx   : in MikumariPulseType;  -- 3-bit short message to be sent with pulse.
+    pulseRegTx    : in MikumariHpmRegType; -- 4-bit additional message transferred by the pulse
     busyPulseTx   : out std_logic;         -- Under transmission of previous pulse. If high, pulseIn is ignored.
 
     -- Cbt ports --
@@ -53,7 +55,8 @@ entity MikumariLane is
     recvTermnd  : out std_logic;           -- Frame end position of the previsou frame is not correctly detected
 
     pulseOut    : out std_logic;           -- Reproduced one-shot pulse output.
-    pulseTypeRx : out MikumariPulseType;   -- Short message accompanying the pulse.
+    pulseTypeRx : out MikumariPulseType;   -- 3-bit short message accompanying the pulse.
+    pulseRegRx  : out MikumariHpmRegType;  -- 4-bit additional message transferred by the pulse
 
     -- Cbt ports --
     isKtypeIn   : in std_logic; --
@@ -94,8 +97,9 @@ begin
     (
       -- CBT --
       kNumEncodeBits  => kNumEncodeBits,
-      -- Scrambler --
+      -- MIKUMARI-Link --
       enScrambler     => enScrambler,
+      kHighPrecision  => kHighPrecision,
       -- DEBUG --
       enDEBUG         => enDEBUG
     )
@@ -114,6 +118,7 @@ begin
 
       pulseIn     => pulseIn,
       pulseType   => pulseTypeTx,
+      pulseReg    => pulseRegTx,
       busyPulseTx => busyPulseTx,
 
       -- Back channel --
@@ -132,8 +137,9 @@ begin
     (
       -- CBT --
       kNumEncodeBits  => kNumEncodeBits,
-      -- Scrambler --
+      -- MIKUMARI-Link --
       enScrambler     => enScrambler,
+      kHighPrecision  => kHighPrecision,
       -- DEBUG --
       enDEBUG         => enDebug
     )
@@ -157,7 +163,7 @@ begin
 
       pulseOut    => pulseOut,
       pulseType   => pulseTypeRx,
-
+      pulseReg    => pulseRegRx,
 
       -- Back channel --
       instRx      => inst_rx,

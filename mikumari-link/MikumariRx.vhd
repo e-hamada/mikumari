@@ -10,11 +10,12 @@ entity MikumariRx is
   generic
   (
     -- CBT --
-    kNumEncodeBits   : integer:= 2;
-    -- Scrambler --
-    enScrambler      : boolean:= true;
+    kNumEncodeBits    : integer:= 2;
+    -- MIKUMARI --
+    enScrambler       : boolean:= true;
+    kHighPrecision    : boolean:= false;
     -- DEBUG --
-    enDEBUG          : boolean:= false
+    enDEBUG           : boolean:= false
   );
   port
   (
@@ -35,7 +36,8 @@ entity MikumariRx is
     recvTermnd  : out std_logic;    -- Frame end position of the previsou frame is not correctly detected
 
     pulseOut    : out std_logic;    -- Reproduced one-shot pulse output.
-    pulseType   : out MikumariPulseType; -- Short message accompanying the pulse.
+    pulseType   : out MikumariPulseType;  -- 3-bit short message accompanying the pulse.
+    pulseReg    : out MikumariHpmRegType; -- 4-bit additional message transferred by the pulse
 
     -- Back channel --
     instRx      : out MikumariBackChannelType;
@@ -77,6 +79,18 @@ architecture RTL of MikumariRx is
   signal reg_pulse_type       : MikumariPulseType;
   signal reg_pulse_timing     : std_logic_vector(kWidthPulseCount-1 downto 0);
   signal sr_pulse             : std_logic_vector(kWidthPulseSr-1 downto 0);
+  signal decoded_data_in      : std_logic_vector(MikumariPulseType'high+1 downto 0);
+  signal is_pulse_char        : std_logic;
+  signal decoded_pulse_type   : MikumariPulseType;
+  -- High-Precision mode --
+  signal decoded_data_in_rdm      : std_logic_vector(MikumariPulseType'high+1 downto 0);
+  signal decoded_data_in_rdp      : std_logic_vector(MikumariPulseType'high+1 downto 0);
+  signal first_is_pulse_char      : std_logic;
+  signal delayed_is_pulse         : std_logic;
+  signal decoded_pulse_type_rdm   : MikumariPulseType;
+  signal decoded_pulse_type_rdp   : MikumariPulseType;
+  signal received_1st_kchar       : std_logic:= '0';
+  signal hpm_pulse_error          : std_logic;
 
   -- Initialize --
   signal mikumari_inst        : MikumariBackChannelType;
@@ -125,6 +139,32 @@ begin
     descranble_data_in <= cbtDataIn;
   end generate;
 
+  gen_llm_pulse_decode : if kHighPrecision = false generate
+  begin
+    decoded_data_in     <= decodePulseType(data_in);
+    is_pulse_char       <= decoded_data_in(kIsPulseIndex) and is_ktype;
+    decoded_pulse_type  <= decoded_data_in(MikumariPulseType'range);
+  end generate;
+
+  gen_hpm_pulse_decode : if kHighPrecision = true generate
+  begin
+    decoded_data_in_rdm <= decodePulseTypeHPM_RDM(data_in);
+    decoded_data_in_rdp <= decodePulseTypeHPM_RDP(data_in);
+
+    first_is_pulse_char <= (decoded_data_in_rdm(kIsPulseIndex) or decoded_data_in_rdp(kIsPulseIndex)) and is_ktype;
+    is_pulse_char       <= first_is_pulse_char or delayed_is_pulse;
+    u_delay_is_pulse : process(clkPar)
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(valid_in = '1') then
+          delayed_is_pulse  <= first_is_pulse_char;
+        end if;
+      end if;
+    end process;
+
+    decoded_pulse_type  <= decoded_data_in_rdm(MikumariPulseType'range) when (decoded_data_in_rdm(kIsPulseIndex) = '1') else decoded_data_in_rdp(MikumariPulseType'range);
+  end generate;
+
   data_in   <= cbtDataIn;
   valid_in  <= cbtValidIn;
   is_ktype  <= isKtypeIn;
@@ -139,7 +179,7 @@ begin
         reg_frame_broken  <= (others => '0');
         recv_terminated   <= '0';
 
-      elsif(valid_in = '1' and mikumari_rx_up = '1' and isPulseChar(data_in, is_ktype)='0') then
+      elsif(valid_in = '1' and mikumari_rx_up = '1' and is_pulse_char = '0') then
         if(is_ktype = '0') then
           --reg_data_st1    <= data_in;
           reg_data(0)     <= descranble_data_in;
@@ -292,22 +332,85 @@ begin
   end process;
 
   -- Pulse recovery --
-  u_pulse_recovery : process(clkPar)
+  -- Low-Lantency mode --
+  gen_llm_pulse_recvery : if kHighPrecision = false generate
   begin
-    if(clkPar'event and clkPar = '1') then
-      if(valid_in = '1' and isPulseChar(data_in, is_ktype) = '1') then
-        reg_pulse_type    <= decodePulseType(data_in);
-        reg_pulse_timing  <= data_in(kWidthPulseCount-1 downto 0);
-        sr_pulse          <= sr_pulse(kWidthPulseSr-2 downto 0) & '1';
-      else
-        sr_pulse          <= sr_pulse(kWidthPulseSr-2 downto 0) & '0';
+    u_pulse_recovery : process(clkPar)
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(valid_in = '1' and is_pulse_char = '1') then
+          reg_pulse_type    <= decoded_pulse_type;
+          reg_pulse_timing  <= data_in(kWidthPulseCount-1 downto 0);
+          sr_pulse          <= sr_pulse(kWidthPulseSr-2 downto 0) & '1';
+        else
+          sr_pulse          <= sr_pulse(kWidthPulseSr-2 downto 0) & '0';
+        end if;
+
+        reg_pulse_out   <= pulse_out;
       end if;
+    end process;
 
-      reg_pulse_out   <= pulse_out;
-    end if;
-  end process;
+    pulse_out   <= sr_pulse(to_integer(unsigned(reg_pulse_timing)));
+  end generate;
 
-  pulse_out   <= sr_pulse(to_integer(unsigned(reg_pulse_timing)));
+  -- High-Precision mode --
+  gen_hpm_pulse_recvery : if kHighPrecision = true generate
+  begin
+    u_pulse_recovery : process(clkPar)
+      variable  encoded_4b      : std_logic_vector(3 downto 0);
+      variable  encoded_6b      : std_logic_vector(5 downto 0);
+      variable  decoded_3b_rdm  : std_logic_vector(3 downto 0);
+      variable  decoded_3b_rdp  : std_logic_vector(3 downto 0);
+      variable  decoded_5b_rdm  : std_logic_vector(5 downto 0);
+      variable  decoded_5b_rdp  : std_logic_vector(5 downto 0);
+      variable  pulse_message   : HpmPulseMessageType;
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(srst = '1') then
+          received_1st_kchar  <= '0';
+        elsif(valid_in = '1' and is_pulse_char = '1') then
+          if(received_1st_kchar = '0') then
+            -- 1st K-character --
+            reg_pulse_type          <= decoded_pulse_type;
+            encoded_6b(5 downto 4)  := data_in(1 downto 0);
+            received_1st_kchar      <= '1';
+          else
+            encoded_6b(3 downto 0)  := data_in(7 downto 4);
+            encoded_4b              := data_in(3 downto 0);
+            decoded_3b_rdm          := decode3b4b_RDM(encoded_4b);
+            decoded_3b_rdp          := decode3b4b_RDP(encoded_4b);
+            decoded_5b_rdm          := decode5b6b_RDM(encoded_6b);
+            decoded_5b_rdp          := decode5b6b_RDP(encoded_6b);
+
+            if(decoded_3b_rdm(decoded_3b_rdm'high) = '1' and decoded_5b_rdm(decoded_5b_rdm'high) = '1') then
+              pulse_message(7 downto 5) := decoded_3b_rdm(2 downto 0);
+              pulse_message(4 downto 0) := decoded_5b_rdm(4 downto 0);
+              reg_pulse_timing          <= pulse_message(kPosPulseCount'range);
+              pulseReg                  <= pulse_message(kPosPulseReg'range);
+            elsif(decoded_3b_rdp(decoded_3b_rdm'high) = '1' and decoded_5b_rdp(decoded_5b_rdm'high) = '1') then
+              pulse_message(7 downto 5) := decoded_3b_rdp(2 downto 0);
+              pulse_message(4 downto 0) := decoded_5b_rdp(4 downto 0);
+              reg_pulse_timing          <= pulse_message(kPosPulseCount'range);
+              pulseReg                  <= pulse_message(kPosPulseReg'range);
+            else
+              hpm_pulse_error           <= '1';
+            end if;
+
+            received_1st_kchar      <= '0';
+            sr_pulse                <= sr_pulse(kWidthPulseSr-2 downto 0) & '1';
+          end if;
+        else
+          hpm_pulse_error           <= '0';
+          sr_pulse                  <= sr_pulse(kWidthPulseSr-2 downto 0) & '0';
+        end if;
+
+        reg_pulse_out   <= pulse_out;
+      end if;
+    end process;
+
+    pulse_out   <= sr_pulse(to_integer(unsigned(reg_pulse_timing)));
+  end generate;
+
 
   u_set_seed : process(clkPar, srst)
   begin
