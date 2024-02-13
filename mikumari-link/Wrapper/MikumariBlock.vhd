@@ -36,8 +36,8 @@ entity MikumariBlock is
     enDebugCBT       : boolean:= false;
 
     -- MIKUMARI generic --------------------------------------------------------
-    -- Scrambler --
     enScrambler      : boolean:= true;
+    kHighPrecision   : boolean:= false;
     -- DEBUG --
     enDebugMikumari  : boolean:= false
   );
@@ -69,6 +69,7 @@ entity MikumariBlock is
     tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
     bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
     firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
+    offsetTable   : out SerdesOffsetType;
 
     -- Mikumari ports -------------------------------------------------------
     linkUp        : out std_logic;         -- MIKUMARI link connection is established
@@ -81,6 +82,7 @@ entity MikumariBlock is
 
     pulseIn       : in std_logic;          -- Pulse input. Must be one-shot signal.
     pulseTypeTx   : in MikumariPulseType;  -- 3-bit short message to be sent with pulse.
+    pulseRegTx    : in MikumariHpmRegType; -- 4-bit additional message transferred by the pulse
     busyPulseTx   : out std_logic;         -- Under transmission of previous pulse. If high, pulseIn is ignored.
 
     -- Data IF RX --
@@ -88,11 +90,12 @@ entity MikumariBlock is
     validOutRx    : out std_logic;         -- Indicate current dataOut is valid.
     frameLastRx   : out std_logic;         -- Indicate current dataOut is the last data in a normal frame.
     checksumErr   : out std_logic;         -- Check-sum error is happened in the present normal frame.
-    frameBroken : out std_logic;           -- Frame start position is not correctly detected
-    recvTermnd  : out std_logic;           -- Frame end position of the previsou frame is not correctly detected
+    frameBroken   : out std_logic;           -- Frame start position is not correctly detected
+    recvTermnd    : out std_logic;           -- Frame end position of the previsou frame is not correctly detected
 
     pulseOut      : out std_logic;         -- Reproduced one-shot pulse output.
-    pulseTypeRx   : out MikumariPulseType  -- Short message accompanying the pulse.
+    pulseTypeRx   : out MikumariPulseType; -- Short message accompanying the pulse.
+    pulseRegRx    : out MikumariHpmRegType -- 4-bit additional message transferred by the pulse
 
   );
 end MikumariBlock;
@@ -167,6 +170,7 @@ begin
       clkIdelayRef  => clkIdctrl,
       initIn        => initIn,
       tapValueIn    => tapValueIn,
+      offsetTable   => offsetTable,
 
       -- Status --
       cbtLaneUp     => cbt_lane_up,
@@ -206,8 +210,9 @@ begin
     (
       -- CBT --
       kNumEncodeBits => kNumEncodeBits,
-      -- Scrambler --
+      -- MIKUMARI-Link --
       enScrambler    => enScrambler,
+      kHighPrecision => kHighPrecision,
       -- DEBUG --
       enDEBUG        => enDebugMikumari
     )
@@ -228,6 +233,7 @@ begin
 
       pulseIn       => pulseIn,
       pulseTypeTx   => pulseTypeTx,
+      pulseRegTx    => pulseRegTx,
       busyPulseTx   => busyPulseTx,
 
       -- Cbt ports --
@@ -248,6 +254,7 @@ begin
 
       pulseOut    => pulseOut,
       pulseTypeRx => pulseTypeRx,
+      pulseRegRx  => pulseRegRx,
 
       -- Cbt ports --
       isKtypeIn   => is_ktype_rx,

@@ -30,15 +30,16 @@ entity CdcmTx is
   port
   (
     -- SYSTEM port --
-    srst      : in std_logic; -- Asynchronous assert, synchronous de-assert reset. (active high)
-    clkSer    : in std_logic; -- From BUFG (5 x clkPar freq.)
-    clkPar    : in std_logic; -- From BUFG
-    selMode   : in TxModeType; -- Select operation mode (async)
+    srst        : in std_logic; -- Asynchronous assert, synchronous de-assert reset. (active high)
+    clkSer      : in std_logic; -- From BUFG (5 x clkPar freq.)
+    clkPar      : in std_logic; -- From BUFG
+    selMode     : in TxModeType; -- Select operation mode (async)
+    offsetTable : out SerdesOffsetType;
 
     -- CDCM output port --
-    TXP       : out std_logic; -- Connect to TOPLEVEL port
-    TXN       : out std_logic; -- Connect to TOPLEVEL port
-    wfPattern : in  CdcmPatternType -- CDCM waveform pattern
+    TXP         : out std_logic; -- Connect to TOPLEVEL port
+    TXN         : out std_logic; -- Connect to TOPLEVEL port
+    wfPattern   : in  CdcmPatternType -- CDCM waveform pattern
   );
 end CdcmTx;
 
@@ -102,7 +103,11 @@ begin
         dOutToPinP      => TXP,
         dOutToPinN      => TXN,
 
-      -- Clock and reset signals
+        -- Phase Offset --
+        offsetTable     => offsetTable,
+        scanFinished    => open,
+
+        -- Clock and reset signals
         clkIn           => clkSer,
         clkDivIn        => clkPar,
         ioReset         => srst
@@ -126,7 +131,11 @@ begin
         dOutToPinP      => TXP,
         dOutToPinN      => TXN,
 
-      -- Clock and reset signals
+        -- Phase Offset --
+        offsetTable     => offsetTable,
+        scanFinished    => open,
+
+        -- Clock and reset signals
         clkIn           => clkSer,
         clkDivIn        => clkPar,
         ioReset         => srst

@@ -6,6 +6,10 @@ use UNISIM.vcomponents.all;
 
 library UNIMACRO;
 use UNIMACRO.Vcomponents.all;
+
+library mylib;
+use mylib.defCDCM.all;
+
 --
 
 entity CdcmTxImpl is
@@ -21,6 +25,9 @@ entity CdcmTxImpl is
     dInFromDevice   : in std_logic_vector(kDevW-1 downto 0);
     dOutToPinP      : out std_logic;
     dOutToPinN      : out std_logic;
+    -- Phase Offset --
+    offsetTable     : out SerdesOffsetType;
+    scanFinished    : out std_logic;
     -- Clock and reset
     clkIn           : in std_logic;
     clkDivIn        : in std_logic;
@@ -144,6 +151,9 @@ begin
 
 
 
+  -- ISERDES Feedback --
+  offsetTable   <= (others => 0);
+  scanFinished  <= '1';
 
 
 end RTL;

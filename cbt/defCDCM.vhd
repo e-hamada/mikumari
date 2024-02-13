@@ -26,6 +26,11 @@ package defCDCM is
   constant kInitTx          : TxModeType:= "01";
   constant kNormalTx        : TxModeType:= "00";
 
+  -- Latency scan --
+  constant kRefLatency      : integer:= 4;
+  type SerdesOffsetType is array(7 downto 0) of integer;
+  function TdcFineCount(bit_patt : std_logic_vector) return integer;
+
   -- RX ---------------------------------------------------------------------------------
   subtype  RxInitStatusType is std_logic_vector(2 downto 0);
   constant kWaitClkReady      : RxInitStatusType:= "000";
@@ -133,6 +138,22 @@ end package defCDCM;
 -- Package body
 -- ----------------------------------------------------------------------------------
 package body defCDCM is
+
+  -- TdcFineCount --------------------------------------------------------------
+  function TdcFineCount(bit_patt : std_logic_vector) return integer is
+  begin
+    case bit_patt is
+      when X"8f" => return -4;
+      when X"C7" => return -3;
+      when X"E3" => return -2;
+      when X"F1" => return -1;
+      when X"F8" => return 0;
+      when X"7C" => return 1;
+      when X"3E" => return 2;
+      when X"1F" => return 3;
+      when others => return -7;
+    end case;
+  end TdcFineCount;
 
   -- GetTapDelay --------------------------------------------------------------
   function GetTapDelay(freq_idelayctrl_ref : real) return real is

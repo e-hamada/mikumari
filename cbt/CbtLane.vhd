@@ -40,6 +40,7 @@ entity CbtLane is
       clkIdelayRef  : in std_logic; -- REFCLK input for IDELAYCTRL. Must be independent from clkPar.
       initIn        : in std_logic; -- Re-do the initialization process. Sync with clkPar.
       tapValueIn    : in std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value input (active when kFixIdelayTap is true)
+      offsetTable   : out SerdesOffsetType;
 
       -- Status --
       cbtLaneUp     : out std_logic; -- Indicates that CBT is ready for communication
@@ -308,6 +309,7 @@ begin
       srst        => srst,
       clkSer      => clkSer,
       clkPar      => clkPar,
+      offsetTable => offsetTable,
 
       -- Status --
       cbtTxUp     => cbt_tx_up,

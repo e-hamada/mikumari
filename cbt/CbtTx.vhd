@@ -24,6 +24,7 @@ entity CbtTx is
     srst        : in std_logic; -- Asynchronous assert, synchronous de-assert reset. (active high)
     clkSer      : in std_logic; -- From BUFG (5 x clkPar freq.)
     clkPar      : in std_logic; -- From BUFG
+    offsetTable : out SerdesOffsetType;
 
     -- Status --
     cbtTxUp     : out std_logic;
@@ -235,6 +236,7 @@ begin
       clkSer    => clkSer,
       clkPar    => clkPar,
       selMode   => tx_mode,
+      offsetTable => offsetTable,
 
       -- CDCM output port --
       TXP       => cdcmTxp,
