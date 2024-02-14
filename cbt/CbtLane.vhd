@@ -40,12 +40,12 @@ entity CbtLane is
       clkIdelayRef  : in std_logic; -- REFCLK input for IDELAYCTRL. Must be independent from clkPar.
       initIn        : in std_logic; -- Re-do the initialization process. Sync with clkPar.
       tapValueIn    : in std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value input (active when kFixIdelayTap is true)
-      offsetTable   : out SerdesOffsetType;
 
       -- Status --
       cbtLaneUp     : out std_logic; -- Indicates that CBT is ready for communication
       tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
       bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
+      serdesOffset  : out signed(kWidthSerdesOffset-1 downto 0);
       firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
 
       -- Error --
@@ -107,6 +107,7 @@ architecture RTL of CbtLane is
 
   -- TX --
   signal cbt_tx_up        : std_logic;
+  signal offset_table     : SerdesOffsetType;
 
   -- RX --
   signal decoder_bit_aligned  : std_logic;
@@ -115,6 +116,7 @@ architecture RTL of CbtLane is
   signal patterr_cbtrx    : std_logic;
   signal valid_cbtrx      : std_logic;
   signal watchdog_error   : std_logic;
+  signal bitslip_num      : std_logic_vector(bitslipNum'range);
 
   -- debug --
   attribute mark_debug  : boolean;
@@ -216,11 +218,13 @@ begin
   -- clkPar clock domain
   -------------------------------------------------------------------------
 
-  modClock    <= modulated_clock;
-  cbtLaneUp   <= lane_up;
-  patternErr  <= patterr_cbtrx;
-  validOutRx  <= valid_cbtrx;
-  watchDogErr <= watchdog_error;
+  modClock      <= modulated_clock;
+  cbtLaneUp     <= lane_up;
+  patternErr    <= patterr_cbtrx;
+  validOutRx    <= valid_cbtrx;
+  watchDogErr   <= watchdog_error;
+  bitslipNum    <= bitslip_num;
+  serdesOffset  <= to_signed(offset_table(to_integer(unsigned(bitslip_num(2 downto 0)))), kWidthSerdesOffset);
 
   -- initIn stretch -------------------------------------------------------
   u_init_stretch : process(srst, clkPar)
@@ -309,7 +313,7 @@ begin
       srst        => srst,
       clkSer      => clkSer,
       clkPar      => clkPar,
-      offsetTable => offsetTable,
+      offsetTable => offset_table,
 
       -- Status --
       cbtTxUp     => cbt_tx_up,
@@ -367,7 +371,7 @@ begin
       decoderReady  => decoder_bit_aligned,
       cbtRxUp       => cbt_rx_up,
       tapValueOut   => tapValueOut,
-      bitslipNum    => bitslipNum,
+      bitslipNum    => bitslip_num,
 
       -- Error --
       patternErr    => patterr_cbtrx,

@@ -68,8 +68,8 @@ entity MikumariBlock is
 
     tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
     bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
+    serdesOffset  : out signed(kWidthSerdesOffset-1 downto 0);
     firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
-    offsetTable   : out SerdesOffsetType;
 
     -- Mikumari ports -------------------------------------------------------
     linkUp        : out std_logic;         -- MIKUMARI link connection is established
@@ -170,12 +170,12 @@ begin
       clkIdelayRef  => clkIdctrl,
       initIn        => initIn,
       tapValueIn    => tapValueIn,
-      offsetTable   => offsetTable,
 
       -- Status --
       cbtLaneUp     => cbt_lane_up,
       tapValueOut   => tapValueOut,
       bitslipNum    => bitslipNum,
+      serdesOffset  => serdesOffset,
       firstBitPatt  => firstBitPatt,
 
       -- Error --

@@ -69,7 +69,8 @@ package defCDCM is
   --constant kPattOkThreshold : integer:= 10;
   constant kPattOkThreshold : integer:= 16;
 
-  constant kWidthBitSlipNum : integer:= 4;
+  constant kWidthBitSlipNum   : integer:= 4;
+  constant kWidthSerdesOffset : integer:= 4;
 
   type BitslipControlProcessType is (
     Init,
