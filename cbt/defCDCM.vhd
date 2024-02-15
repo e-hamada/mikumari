@@ -28,8 +28,9 @@ package defCDCM is
 
   -- Latency scan --
   constant kRefLatency      : integer:= 4;
-  type SerdesOffsetType is array(7 downto 0) of integer;
-  function TdcFineCount(bit_patt : std_logic_vector) return integer;
+  constant kWidthScanTdc    : integer:= 8;
+  type SerdesOffsetType is array(7 downto 0) of signed(kWidthScanTdc-1 downto 0);
+  function TdcFineCount(bit_patt : std_logic_vector) return signed;
 
   -- RX ---------------------------------------------------------------------------------
   subtype  RxInitStatusType is std_logic_vector(2 downto 0);
@@ -141,18 +142,18 @@ end package defCDCM;
 package body defCDCM is
 
   -- TdcFineCount --------------------------------------------------------------
-  function TdcFineCount(bit_patt : std_logic_vector) return integer is
+  function TdcFineCount(bit_patt : std_logic_vector) return signed is
   begin
     case bit_patt is
-      when X"8f" => return -4;
-      when X"C7" => return -3;
-      when X"E3" => return -2;
-      when X"F1" => return -1;
-      when X"F8" => return 0;
-      when X"7C" => return 1;
-      when X"3E" => return 2;
-      when X"1F" => return 3;
-      when others => return -7;
+      when X"8f" => return to_signed(-4, kWidthScanTdc);
+      when X"C7" => return to_signed(-3, kWidthScanTdc);
+      when X"E3" => return to_signed(-2, kWidthScanTdc);
+      when X"F1" => return to_signed(-1, kWidthScanTdc);
+      when X"F8" => return to_signed(0, kWidthScanTdc);
+      when X"7C" => return to_signed(1, kWidthScanTdc);
+      when X"3E" => return to_signed(2, kWidthScanTdc);
+      when X"1F" => return to_signed(3, kWidthScanTdc);
+      when others => return to_signed(-7, kWidthScanTdc);
     end case;
   end TdcFineCount;
 

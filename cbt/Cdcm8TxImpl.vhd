@@ -56,13 +56,13 @@ architecture RTL of Cdcm8TxImpl is
   signal reg_iserdes_out      : std_logic_vector(dInFromDevice'range);
   signal bit_slip             : std_logic;
 
-  signal coarse_count         : integer;
-  signal tdc_coarse           : integer;
-  signal tdc_fine             : integer;
+  signal coarse_count         : signed(kWidthScanTdc-1 downto 0);
+  signal tdc_coarse           : signed(kWidthScanTdc-1 downto 0);
+  signal tdc_fine             : signed(kWidthScanTdc-1 downto 0);
   signal reg_tdc              : SerdesOffsetType;
   signal ref_index            : integer;
-  signal reg_reftdc           : integer;
-  signal serdes_latency       : integer;
+  signal reg_reftdc           : signed(kWidthScanTdc-1 downto 0);
+  signal serdes_latency       : signed(kWidthScanTdc-1 downto 0);
   signal reg_offset           : SerdesOffsetType;
 
   type ScanStateType is (Idle, MeasureTdc, BitSlip, WaitState, CalcOffset, Done);
@@ -219,6 +219,7 @@ begin
   u_scan_fasm : process(ioReset, clkDivIn)
     variable bitslip_count  : integer range -1 to kDevW:=0;
     variable wait_count     : integer range -1 to 24:=0;
+    variable tmp_coarse     : signed(tdc_coarse'range);
   begin
     if(ioReset = '1') then
       waveform_in           <= X"F0";
@@ -236,7 +237,7 @@ begin
           if(wait_count = 0) then
             reg_iserdes_out   <= rx_output;
             waveform_in       <= X"F8";
-            coarse_count      <= 0;
+            coarse_count      <= (others => '0');
             state_scan        <= MeasureTdc;
           end if;
 
@@ -249,15 +250,16 @@ begin
           end if;
 
         when BitSlip =>
-          reg_tdc(bitslip_count)   <= kDevW*tdc_coarse + tdc_fine;
+          tmp_coarse  := tdc_coarse(tdc_coarse'high-3 downto 0) & "000"; -- Multiply 8
+          reg_tdc(bitslip_count)   <= tmp_coarse + tdc_fine;
           if(rx_output = X"F8") then
             ref_index       <= bitslip_count;
-            reg_reftdc      <= kDevW*tdc_coarse + tdc_fine;
+            reg_reftdc      <= tmp_coarse + tdc_fine;
             serdes_latency  <= tdc_coarse;
           end if;
 
-          tdc_coarse    <= 0;
-          coarse_count  <= 0;
+          tdc_coarse    <= (others => '0');
+          coarse_count  <= (others => '0');
           waveform_in   <= X"F0";
           if(bitslip_count = 7) then
             state_scan  <= CalcOffset;
@@ -281,7 +283,7 @@ begin
           for i in 0 to kDevW-1 loop
             reg_offset(i)   <= reg_tdc(i) - reg_reftdc;
           end loop;
-          if(serdes_latency /= kRefLatency) then
+          if(to_integer(serdes_latency) /= kRefLatency) then
             set_additional_delay  <= '1';
           end if;
           state_scan  <= Done;

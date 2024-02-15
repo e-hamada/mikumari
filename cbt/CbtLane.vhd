@@ -224,7 +224,7 @@ begin
   validOutRx    <= valid_cbtrx;
   watchDogErr   <= watchdog_error;
   bitslipNum    <= bitslip_num;
-  serdesOffset  <= to_signed(offset_table(to_integer(unsigned(bitslip_num(2 downto 0)))), kWidthSerdesOffset);
+  serdesOffset  <= offset_table(to_integer(unsigned(bitslip_num(2 downto 0))))(kWidthSerdesOffset-1 downto 0);
 
   -- initIn stretch -------------------------------------------------------
   u_init_stretch : process(srst, clkPar)
