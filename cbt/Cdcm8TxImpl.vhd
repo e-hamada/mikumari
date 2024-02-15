@@ -69,13 +69,13 @@ architecture RTL of Cdcm8TxImpl is
   type ScanStateType is (Idle, MeasureTdc, BitSlip, WaitState, CalcOffset, Done);
   signal state_scan : ScanStateType;
 
-  attribute mark_debug  : string;
-  attribute mark_debug of waveform_in : signal is "true";
-  attribute mark_debug of rx_output   : signal is "true";
-  attribute mark_debug of bit_slip    : signal is "true";
-  attribute mark_debug of state_scan  : signal is "true";
-  attribute mark_debug of reg_tdc     : signal is "true";
-  attribute mark_debug of reg_offset  : signal is "true";
+--  attribute mark_debug  : string;
+--  attribute mark_debug of waveform_in : signal is "true";
+--  attribute mark_debug of rx_output   : signal is "true";
+--  attribute mark_debug of bit_slip    : signal is "true";
+--  attribute mark_debug of state_scan  : signal is "true";
+--  attribute mark_debug of reg_tdc     : signal is "true";
+--  attribute mark_debug of reg_offset  : signal is "true";
 
 begin
 
