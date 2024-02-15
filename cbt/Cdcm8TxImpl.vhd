@@ -150,7 +150,7 @@ begin
 
   u_swap : for i in 0 to kDevW-1 generate
   begin
-    din_oserdes(kMaxBit-i-1)     <= waveform_in(i) when(reg_scan_finished = '0') else din_from_device(i);
+    din_oserdes(kMaxBit-i-1)     <= waveform_in(kDevW-1-i) when(reg_scan_finished = '0') else din_from_device(i);
     rx_output(i)   <= iserdes_q(i);
   end generate;
   din_oserdes(kMaxBit-kDevW-1 downto 0)  <= (others => '0');
