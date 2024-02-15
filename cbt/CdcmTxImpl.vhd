@@ -152,7 +152,7 @@ begin
 
 
   -- ISERDES Feedback --
-  offsetTable   <= (others => 0);
+  offsetTable   <= (others => (others => '0'));
   scanFinished  <= '1';
 
 
