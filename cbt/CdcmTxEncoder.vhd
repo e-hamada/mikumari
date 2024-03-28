@@ -76,7 +76,7 @@ begin
   end generate;
 
   -- Generate encoder ------------------------------------------------------------------
-  u_index : process(srst, clkPar)
+  u_index : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then

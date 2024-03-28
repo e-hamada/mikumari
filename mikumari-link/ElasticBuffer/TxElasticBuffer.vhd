@@ -30,8 +30,12 @@ architecture RTL of TxElasticBuffer is
   attribute mark_debug : string;
 
   -- System --
-  signal reset_shiftreg       : std_logic_vector(kWidthResetSync-1 downto 0);
   signal sync_reset           : std_logic;
+  constant kWidthResetSync    : integer:= 16;
+  signal reset_shiftreg       : std_logic_vector(kWidthResetSync-1 downto 0);
+
+  attribute async_reg : string;
+  attribute async_reg of u_sync_reset : label is "true";
 
   constant kLengthBuffer      : integer:= 8;
   signal read_ptr, write_ptr  : integer range 0 to kLengthBuffer-1;
@@ -51,7 +55,7 @@ begin
 
 
   -- Ring buffer --
-  u_write_buffer : process(sync_reset, clkPar)
+  u_write_buffer : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(sync_reset = '1') then
@@ -69,7 +73,7 @@ begin
     end if;
   end process;
 
-  u_read_buffer : process(sync_reset, clkPar)
+  u_read_buffer : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(sync_reset = '1') then
@@ -87,12 +91,10 @@ begin
 
   -- Reset sequence --
   sync_reset  <= reset_shiftreg(kWidthResetSync-1);
-  u_sync_reset : process(rst, clkPar)
+  u_sync_reset : process(clkPar)
   begin
-    if(rst = '1') then
-      reset_shiftreg  <= (others => '1');
-    elsif(clkPar'event and clkPar = '1') then
-      reset_shiftreg  <= reset_shiftreg(kWidthResetSync-2 downto 0) & '0';
+    if(clkPar'event and clkPar = '1') then
+      reset_shiftreg  <= reset_shiftreg(kWidthResetSync-2 downto 0) & rst;
     end if;
   end process;
 

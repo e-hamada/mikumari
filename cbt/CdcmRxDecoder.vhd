@@ -113,7 +113,7 @@ begin
   end generate;
 
   -- Generate decoder ------------------------------------------------------------------
-  u_index : process(srst, clkPar)
+  u_index : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -143,7 +143,7 @@ begin
     end if;
   end process;
 
-  u_timingshift : process(srst, clkPar)
+  u_timingshift : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -165,7 +165,7 @@ begin
     end if;
   end process;
 
-  u_outbuf : process(srst, clkPar)
+  u_outbuf : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       data_array(index_array)  <= decoded_payload;

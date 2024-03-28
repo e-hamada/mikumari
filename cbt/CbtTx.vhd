@@ -88,7 +88,7 @@ begin
   cbtTxUp       <= cbt_tx_up;
 
   -- Tx control under initialization process ------------------------------
-  u_tx_up : process(srst, clkPar)
+  u_tx_up : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -115,7 +115,7 @@ begin
                       '0';
 
   -- Select CDCM-TX mode --
-  u_tx_mode : process(srst, clkPar)
+  u_tx_mode : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -149,7 +149,7 @@ begin
     end if;
   end process;
 
-  u_header_rd : process(srst, cbt_tx_up, clkPar)
+  u_header_rd : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1' or cbt_tx_up = '0') then
@@ -175,7 +175,7 @@ begin
                        dtype_char when(send_ttype_char = '0' and isKType = '0') else
                        ttype_char;
 
-  u_dogfood_timer : process(srst, clkPar)
+  u_dogfood_timer : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then

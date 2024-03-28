@@ -29,28 +29,30 @@ begin
 
   dataOut   <= reg_sr;
 
-  u_lfsr : process(clk, setSeed)
+  u_lfsr : process(clk)
   begin
-    if(setSeed = '1') then
-      reg_sr      <= kSeed;
-    elsif(clk'event and clk = '1') then
-      if(enClk = '1') then
-        reg_sr(0)   <= reg_sr(15);               -- -16
-        reg_sr(1)   <= reg_sr(0) xor reg_sr(15); -- -15
-        reg_sr(2)   <= reg_sr(1);                -- -14
-        reg_sr(3)   <= reg_sr(2) xor reg_sr(15); -- -13
-        reg_sr(4)   <= reg_sr(3);                -- -12
-        reg_sr(5)   <= reg_sr(4);                -- -11
-        reg_sr(6)   <= reg_sr(5);                -- -10
-        reg_sr(7)   <= reg_sr(6);                -- -9
-        reg_sr(8)   <= reg_sr(7);                -- -8
-        reg_sr(9)   <= reg_sr(8);                -- -7
-        reg_sr(10)  <= reg_sr(9);                -- -6
-        reg_sr(11)  <= reg_sr(10);               -- -5
-        reg_sr(12)  <= reg_sr(11) xor reg_sr(15);-- -4
-        reg_sr(13)  <= reg_sr(12);               -- -3
-        reg_sr(14)  <= reg_sr(13);               -- -2
-        reg_sr(15)  <= reg_sr(14);               -- -1
+    if(clk'event and clk = '1') then
+      if(setSeed = '1') then
+        reg_sr      <= kSeed;
+      else
+        if(enClk = '1') then
+          reg_sr(0)   <= reg_sr(15);               -- -16
+          reg_sr(1)   <= reg_sr(0) xor reg_sr(15); -- -15
+          reg_sr(2)   <= reg_sr(1);                -- -14
+          reg_sr(3)   <= reg_sr(2) xor reg_sr(15); -- -13
+          reg_sr(4)   <= reg_sr(3);                -- -12
+          reg_sr(5)   <= reg_sr(4);                -- -11
+          reg_sr(6)   <= reg_sr(5);                -- -10
+          reg_sr(7)   <= reg_sr(6);                -- -9
+          reg_sr(8)   <= reg_sr(7);                -- -8
+          reg_sr(9)   <= reg_sr(8);                -- -7
+          reg_sr(10)  <= reg_sr(9);                -- -6
+          reg_sr(11)  <= reg_sr(10);               -- -5
+          reg_sr(12)  <= reg_sr(11) xor reg_sr(15);-- -4
+          reg_sr(13)  <= reg_sr(12);               -- -3
+          reg_sr(14)  <= reg_sr(13);               -- -2
+          reg_sr(15)  <= reg_sr(14);               -- -1
+        end if;
       end if;
     end if;
   end process;

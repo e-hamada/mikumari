@@ -157,7 +157,7 @@ begin
   cbt_char_header   <= character_out(kNumCbtCharBits-1 downto kNumCbtCharBits-kNumCbtHeaderBits);
   cbt_char_data     <= character_out(kNumCbtCharBits-kNumCbtHeaderBits-1 downto 0);
 
-  u_header_rd : process(srst, cbt_rx_up, clkPar)
+  u_header_rd : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1' or cbt_rx_up = '0') then
@@ -200,7 +200,7 @@ begin
   end process;
 
   -- Watch dog --------------------------------------------------------------
-  u_watchdog : process(clkPar, srst)
+  u_watchdog : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -237,7 +237,7 @@ begin
   -- Instruction SM -------------------------------------------------------
   gen_master : if kCbtMode = "Master" generate
   begin
-    u_master_sm : process(reset_sm, clkPar)
+    u_master_sm : process(clkPar)
       variable match_count    : integer range 0 to kNumMatchCycle+1;
       variable initial_timer  : integer range 0 to kNumInitTimeOut+1;
       variable delay_count    : integer range 0 to kNumDelayInit+1;
@@ -324,7 +324,7 @@ begin
 
   gen_slave : if kCbtMode = "Slave" generate
   begin
-    u_slave_sm : process(reset_sm, clkPar)
+    u_slave_sm : process(clkPar)
       variable match_count    : integer range 0 to kNumMatchCycle+1:= 0;
       variable initial_timer  : integer range 0 to kNumInitTimeOut+1:= 0;
       variable delay_count    : integer range 0 to kNumDelayInit+1;

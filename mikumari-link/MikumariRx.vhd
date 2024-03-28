@@ -241,7 +241,7 @@ begin
     end if;
   end process;
 
-  u_checksum : process(clkPar, srst, mikumari_rx_up)
+  u_checksum : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1' or mikumari_rx_up = '0') then
@@ -261,7 +261,7 @@ begin
   -- Cbt port --
 
   -- Link up process --
-  u_init_sm : process(clkPar, srst)
+  u_init_sm : process(clkPar)
     constant  kNumCount   : integer:= 63;
     variable  count   : integer range 0 to kNumCount:= 0;
     variable  reserve : std_logic:= '0';
@@ -351,6 +351,7 @@ begin
     end process;
 
     pulse_out   <= sr_pulse(to_integer(unsigned(reg_pulse_timing)));
+    pulseReg    <= (others => '0');
   end generate;
 
   -- High-Precision mode --
@@ -412,7 +413,7 @@ begin
   end generate;
 
 
-  u_set_seed : process(clkPar, srst)
+  u_set_seed : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then

@@ -61,7 +61,6 @@ architecture RTL of Cdcm8TxImpl is
   signal tdc_coarse           : signed(kWidthScanTdc-1 downto 0);
   signal tdc_fine             : signed(kWidthScanTdc-1 downto 0);
   signal reg_tdc              : SerdesOffsetType;
-  signal ref_index            : integer;
   signal reg_reftdc           : signed(kWidthScanTdc-1 downto 0);
   signal serdes_latency       : signed(kWidthScanTdc-1 downto 0);
   signal reg_offset           : SerdesOffsetType;
@@ -254,7 +253,6 @@ begin
           tmp_coarse  := tdc_coarse(tdc_coarse'high-3 downto 0) & "000"; -- Multiply 8
           reg_tdc(bitslip_count)   <= tmp_coarse + tdc_fine;
           if(rx_output = X"F8") then
-            ref_index       <= bitslip_count;
             reg_reftdc      <= tmp_coarse + tdc_fine;
             serdes_latency  <= tdc_coarse;
           end if;

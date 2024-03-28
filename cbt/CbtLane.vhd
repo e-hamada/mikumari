@@ -227,7 +227,7 @@ begin
   serdesOffset  <= offset_table(to_integer(unsigned(bitslip_num(2 downto 0))))(kWidthSerdesOffset-1 downto 0);
 
   -- initIn stretch -------------------------------------------------------
-  u_init_stretch : process(srst, clkPar)
+  u_init_stretch : process(clkPar)
     variable  count  : integer range 0 to to_integer(unsigned(kMaxWDT))*2+1 := 0;
   begin
     if(clkPar'event and clkPar = '1') then
@@ -251,7 +251,7 @@ begin
   end process;
 
   -- CBT Lane Up ----------------------------------------------------------
-  u_lane_up : process(srst, clkPar)
+  u_lane_up : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then

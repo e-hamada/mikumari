@@ -108,6 +108,9 @@ architecture Behavioral of MikumariBlock is
   constant kWidthResetSync    : integer:= 16;
   signal reset_shiftreg       : std_logic_vector(kWidthResetSync-1 downto 0);
 
+  attribute async_reg : string;
+  attribute async_reg of u_sync_reset : label is "true";
+
   -- CBT --
   signal cbt_lane_up          : std_logic;
 
@@ -264,12 +267,10 @@ begin
 
   -- Reset sequence --
   sync_reset  <= reset_shiftreg(kWidthResetSync-1);
-  u_sync_base_reset : process(rst, clkPar)
+  u_sync_reset : process(clkPar)
   begin
-    if(rst = '1') then
-      reset_shiftreg  <= (others => '1');
-    elsif(clkPar'event and clkPar = '1') then
-      reset_shiftreg  <= reset_shiftreg(kWidthResetSync-2 downto 0) & '0';
+    if(clkPar'event and clkPar = '1') then
+      reset_shiftreg  <= reset_shiftreg(kWidthResetSync-2 downto 0) & rst;
     end if;
   end process;
 

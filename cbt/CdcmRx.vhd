@@ -279,7 +279,7 @@ begin
   u_gen_fixedtap : if kFixIdelayTap = TRUE generate
   begin
 
-    u_idelay_sm : process(serdes_reset, clkPar)
+    u_idelay_sm : process(clkPar)
       variable elapsed_time           : integer range 0 to kMaxIdelayCheck;
       variable wait_count             : integer range 0 to kLoadWait;
     begin
@@ -346,7 +346,7 @@ begin
   u_ungen : if kFixIdelayTap = FALSE generate
   begin
 
-    u_idelay_sm : process(serdes_reset, clkPar)
+    u_idelay_sm : process(clkPar)
       variable num_idelay_appropriate : integer range 0 to kNumTaps-1;
       variable num_cont_appropriate   : integer range 0 to kNumTaps-1;
       variable num_idelay_check       : integer range 0 to kNumTaps;
@@ -478,7 +478,7 @@ begin
     end if;
   end process;
 
-  u_bitslip_sm : process(serdes_reset, clkPar)
+  u_bitslip_sm : process(clkPar)
     variable num_patt_check       : integer range 0 to kWidthDev;
     variable elapsed_time         : integer range 0 to kMaxPattCheck;
     variable wait_count           : integer range 0 to kLoadWait;
@@ -556,7 +556,7 @@ begin
   cdcmUpRx    <= cdcm_rx_up;
   statusInit  <= status_init;
 
-  u_init_status : process(serdes_reset, clkPar)
+  u_init_status : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(serdes_reset = '1') then
@@ -577,7 +577,7 @@ begin
     end if;
   end process;
 
-  u_cdcm_up : process(serdes_reset, clkPar)
+  u_cdcm_up : process(clkPar)
     variable init_patt_count  : integer range 0 to kNumPattMatchCycle+10:= 0;
   begin
     if(clkPar'event and clkPar = '1') then

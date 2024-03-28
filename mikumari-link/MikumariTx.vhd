@@ -73,7 +73,6 @@ architecture RTL of MikumariTx is
   signal reg_data_in          : CbtUDataType;
   signal scramble_data_in     : CbtUDataType;
   signal reg_valid_in         : std_logic;
-  signal is_shifted           : std_logic;
 
   signal reg_check_sum        : std_logic_vector(kWidthCheckSum-1 downto 0);
   signal complement_check_sum : std_logic_vector(kWidthCheckSum-1 downto 0);
@@ -135,7 +134,7 @@ begin
   -- Data I/F --
   txAck   <= tx_ack;
 
-  u_userif_reg : process(clkPar, srst, first_fsk_sent)
+  u_userif_reg : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1' or first_fsk_sent = '0') then
@@ -149,7 +148,6 @@ begin
 
         reg_data_in       <= (others => '0');
         reg_valid_in      <= '0';
-        is_shifted        <= '0';
       else
         if(cbtTxBeat = '1') then
           if(is_reserved = '0') then
@@ -238,7 +236,7 @@ begin
                   reg_valid_in when(tx_flag(kUserDataTx.Index) = '1') else '0';
 
   -- Link up process --------------------------------------------------------------------------
-  u_init_process : process(clkPar, srst)
+  u_init_process : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -261,7 +259,7 @@ begin
   end process;
 
   -- Send first fsk --
-  u_first_fst : process(clkPar, srst)
+  u_first_fst : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -281,7 +279,7 @@ begin
   -- Normal frame ---------------------------------------------------------------------------
   complement_check_sum  <= not reg_check_sum;
 
-  u_check_sum : process(clkPar, srst)
+  u_check_sum : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
@@ -369,7 +367,7 @@ begin
   -- Low-Latency Mode (default) --
   gen_pkc_llm : if kHighPrecision = false generate
   begin
-    u_pulse_gen : process(clkPar, srst)
+    u_pulse_gen : process(clkPar)
     begin
       if(clkPar'event and clkPar = '1') then
         if(srst = '1') then
@@ -403,7 +401,7 @@ begin
     encoded_4b      <= encode3b4b(pulse_message(7 downto 5), running_disparity);
     encoded_6b      <= encode5b6b(pulse_message(4 downto 0), running_disparity);
 
-    u_pulse_gen : process(clkPar, srst)
+    u_pulse_gen : process(clkPar)
     begin
       if(clkPar'event and clkPar = '1') then
         if(srst = '1') then
@@ -443,7 +441,7 @@ begin
 
   -- Scrambler ------------------------------------------------------------------------------
 
-  u_set_seed : process(clkPar, srst)
+  u_set_seed : process(clkPar)
   begin
     if(clkPar'event and clkPar = '1') then
       if(srst = '1') then
