@@ -104,6 +104,7 @@ architecture RTL of CdcmRx is
   signal prev_data            : CdcmPatternType;
   signal first_bit_pattern    : CdcmPatternType;
 
+  signal reg_prev_serdes_out  : CdcmPatternType;
   signal en_bitslip           : std_logic;
   signal en_idle_check        : std_logic;
   signal idle_patt_count      : integer range 0 to kMaxPattCheck;
@@ -258,7 +259,7 @@ begin
 
   -- Idelay control -----------------------------------------------------------------
   serdes_reset  <= rst_all or initIn;
-  idelay_reset  <= rst_all or initIn or idelay_tap_load;
+  idelay_reset  <= rst_all or idelay_tap_load;
 
   u_idelay_check : process(clkPar)
   begin
@@ -366,6 +367,7 @@ begin
           tap_value_in        <= 0;
           idelay_tap_load     <= '0';
 
+          reg_prev_serdes_out <= (others => '0');
           idelay_is_adjusted  <= '0';
           state_idelay        <= Init;
         else
@@ -378,20 +380,33 @@ begin
               idelay_tap_load   <= '0';
               elapsed_time      := elapsed_time +1;
               if(idelay_check_count = kSuccThreshold) then
-                num_idelay_appropriate  := num_idelay_appropriate + 1;
-                num_idelay_check        := num_idelay_check + 1;
-                num_cont_appropriate    := 0;
+                if(unsigned(reg_prev_serdes_out) = 0 or reg_prev_serdes_out = reg_dout_serdes) then
+                  num_idelay_appropriate  := num_idelay_appropriate + 1;
+                  num_idelay_check        := num_idelay_check + 1;
+                  num_cont_appropriate    := 0;
 
-                en_idelay_check   <= '0';
-                state_idelay      <= NumTrialCheck;
+                  reg_prev_serdes_out     <= reg_dout_serdes;
+                  en_idelay_check         <= '0';
+                  state_idelay            <= NumTrialCheck;
+                else
+                  -- Time out
+                  num_cont_appropriate    := num_idelay_appropriate;
+
+                  reg_prev_serdes_out     <= reg_dout_serdes;
+                  num_idelay_appropriate  := 0;
+                  num_idelay_check        := num_idelay_check + 1;
+                  en_idelay_check         <= '0';
+                  state_idelay            <= NumTrialCheck;
+                end if;
               elsif(elapsed_time  = kMaxIdelayCheck-1) then
                 -- Time out
                 num_cont_appropriate    := num_idelay_appropriate;
 
+                reg_prev_serdes_out     <= (others => '0');
                 num_idelay_appropriate  := 0;
-                num_idelay_check  := num_idelay_check + 1;
-                en_idelay_check   <= '0';
-                state_idelay      <= NumTrialCheck;
+                num_idelay_check        := num_idelay_check + 1;
+                en_idelay_check         <= '0';
+                state_idelay            <= NumTrialCheck;
               end if;
 
             when NumTrialCheck  =>
@@ -430,6 +445,7 @@ begin
               wait_count  := wait_count-1;
 
             when IdelayAdjusted =>
+              reg_prev_serdes_out <= (others => '0');
               idelay_tap_load     <= '0';
               if(wait_count = 0) then
                 idelay_is_adjusted  <= '1';
@@ -444,6 +460,7 @@ begin
               num_idelay_check        := 0;
               decrement_count         := 0;
 
+              reg_prev_serdes_out     <= (others => '0');
               tap_value_in            <= 0;
               idelay_tap_load         <= '1';
 
