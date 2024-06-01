@@ -49,13 +49,16 @@ package defCDCM is
   --constant kWidthCheckCount : integer:= 8;
   constant kLoadWait        : integer:= 4;
 
+  constant kAcceptUnstableLength  : integer:= 4;
+  constant kMaxRetryWait    : integer:= 65535;
+
   function GetTapDelay(freq_idelayctrl_ref : real) return real;
   function GetPlateauLength(tap_delay       : real;
                             freq_fast_clock : real) return integer;
 
    type IdelayControlProcessType is (
     Init,
---    WaitPllReady,
+    RetryWait,
     Check,
     NumTrialCheck,
     Increment,
@@ -131,9 +134,12 @@ package defCDCM is
   constant kMaxWDT              : std_logic_vector(kWidthWatchDogTimer-1 downto 0):= X"FFFFF";
 
   -- RX quality check --
-  constant kCheckFrameLength  : integer:= 512;
-  constant kLowQualityTh      : integer:= integer(0.01*real(kCheckFrameLength)); -- 1%
-  constant kSyncLength        : integer:= 4;
+  constant kCheckFrameLength    : integer:= 512;
+  constant kLowQualityTh        : integer:= integer(0.01*real(kCheckFrameLength)); -- 1%
+  constant kSyncLength          : integer:= 4;
+
+  -- Primary wait --
+  constant kWidthInitDelay      : integer:= 18;
 
 end package defCDCM;
 -- ----------------------------------------------------------------------------------

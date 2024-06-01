@@ -105,6 +105,10 @@ architecture RTL of CbtLane is
   signal sync_init : std_logic_vector(kSyncLength-1 downto 0);
   signal init_from_rxquality  : std_logic;
 
+  -- Init wait --
+  signal init_delay_counter : std_logic_vector(kWidthInitDelay-1 downto 0);
+  signal delayed_reset      : std_logic;
+
   -- TX --
   signal cbt_tx_up        : std_logic;
   signal offset_table     : SerdesOffsetType;
@@ -275,7 +279,27 @@ begin
       );
 
     --init_cdcm_rx  <= stretched_init or clock_lost or init_from_rxquality;
-    init_cdcm_rx  <= stretched_init or init_from_rxquality;
+    --init_cdcm_rx  <= stretched_init or init_from_rxquality;
+    init_cdcm_rx  <= stretched_init or delayed_reset or clock_lost;
+
+    u_init_delay : process(clkPar)
+    begin
+      if(clkPar'event and clkPar = '1') then
+        if(srst = '1') then
+          init_delay_counter  <= (others => '0');
+          delayed_reset       <= '0';
+        elsif((init_from_rxquality = '1' or watchdog_error = '1') and unsigned(init_delay_counter) = 0) then
+          init_delay_counter  <= (others => '1');
+          delayed_reset       <= '1';
+        else
+          if(unsigned(init_delay_counter) = 0) then
+            delayed_reset <= '0';
+          else
+            init_delay_counter  <= std_logic_vector(unsigned(init_delay_counter) -1);
+          end if;
+        end if;
+      end if;
+    end process;
 
     u_delay_sr : process(clkPar)
     begin
