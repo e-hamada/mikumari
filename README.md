@@ -1,7 +1,7 @@
 # MIKUMARI
 Official repository of MIKUMARI.
 
-Current version: 2.0
+Stable version: 2.1
 
 [Change log](ChangeLog.md)
 
