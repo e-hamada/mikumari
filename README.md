@@ -1,6 +1,8 @@
 # MIKUMARI
 Official repository of MIKUMARI.
 
+2025/5/19 forked
+
 Stable version: 2.1
 
 [Change log](ChangeLog.md)
