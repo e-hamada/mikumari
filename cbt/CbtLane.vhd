@@ -8,6 +8,7 @@ use mylib.defCDCM.all;
 entity CbtLane is
   generic
     (
+      kFamily          : string;
       -- CDCM-Mod-Pattern --
       kCdcmModWidth    : integer; -- # of time slices of the CDCM signal
       -- CDCM-TX --
@@ -34,7 +35,8 @@ entity CbtLane is
       -- SYSTEM port --
       srst          : in std_logic; -- Reset logics driven by clkPar. Transceiver function reset. (active high)
       pwrOnRst      : in std_logic; -- Reset logics driven by clkIndep and clkIdelayRef. (active high)
-      clkSer        : in std_logic; -- From BUFG (5 x clkPar freq.)
+      clkSer_TX        : in std_logic; -- From BUFG (5 x clkPar freq.)
+      clkSer_RX        : in std_logic; -- From BUFG (5 x clkPar freq.)
       clkPar        : in std_logic; -- From BUFG
       clkIndep      : in std_logic; -- Independent clock for monitor
       clkIdelayRef  : in std_logic; -- REFCLK input for IDELAYCTRL. Must be independent from clkPar.
@@ -47,6 +49,8 @@ entity CbtLane is
       bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
       serdesOffset  : out signed(kWidthSerdesOffset-1 downto 0);
       firstBitPatt  : out CdcmPatternType; -- ISERDES output pattern after finishing the idelay adjustment
+      CNTVALUEOUTInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);
+      CNTVALUEOUT_slaveInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);    
 
       -- Error --
       patternErr    : out std_logic; -- Indicates CDCM waveform pattern is collapsed.
@@ -321,6 +325,7 @@ begin
   u_cbttx : entity mylib.CbtTx
     generic map
     (
+      kFamily          => kFamily,
       -- CDCM-TX --
       kIoStandard      => kIoStandardTx,
       kCdcmModWidth    => kCdcmModWidth,
@@ -335,7 +340,7 @@ begin
     (
       -- SYSTEM port --
       srst        => srst,
-      clkSer      => clkSer,
+      clkSer      => clkSer_TX,
       clkPar      => clkPar,
       offsetTable => offset_table,
 
@@ -362,6 +367,7 @@ begin
   u_cbtrx : entity mylib.CbtRx
     generic map
     (
+      kFamily            => kFamily,
       -- CDCM-RX --
       genIDELAYCTRL      => genIDELAYCTRL,
       kDiffTerm          => kDiffTerm,
@@ -384,7 +390,7 @@ begin
       -- SYSTEM port --
       srst          => srst,
       pwrOnRst      => pwrOnRst,
-      clkSer        => clkSer,
+      clkSer        => clkSer_RX,
       clkPar        => clkPar,
       clkIdelayRef  => clkIdelayRef,
       initIn        => init_cdcm_rx,
@@ -396,7 +402,8 @@ begin
       cbtRxUp       => cbt_rx_up,
       tapValueOut   => tapValueOut,
       bitslipNum    => bitslip_num,
-
+      CNTVALUEOUTInit => CNTVALUEOUTInit,
+      CNTVALUEOUT_slaveInit => CNTVALUEOUT_slaveInit,
       -- Error --
       patternErr    => patterr_cbtrx,
       idelayErr     => idelayErr,

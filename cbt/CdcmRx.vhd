@@ -53,6 +53,8 @@ entity CdcmRx is
     cdcmUpRx      : out std_logic; -- Indicate that CDCM-RX is ready for communication.
     tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
     bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
+    CNTVALUEOUTInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);
+    CNTVALUEOUT_slaveInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);    
 
     -- Error status --
     idelayErr     : out std_logic; -- IDELAY auto adjust was failed.
@@ -75,6 +77,11 @@ architecture RTL of CdcmRx is
   signal cdcm_pattern_ok      : std_logic;
   signal ready_ctrl           : std_logic;
   signal rst_all              : std_logic;
+  signal rst_idelayctrl       : std_logic;
+  signal rst_idelayctrl_all   : std_logic;
+  signal rst_idelayctrl_all_old   : std_logic;
+  signal rst_idelayctrl_clkIdelayRef   : std_logic;
+  signal rst_idelayctrl_clkIdelayRef_old   : std_logic;
 
   signal cdcm_rx_up           : std_logic;
   signal status_init          : RxInitStatusType;
@@ -88,9 +95,17 @@ architecture RTL of CdcmRx is
   signal idelay_reset   : std_logic;
   signal idelay_check_count : integer range 0 to kMaxIdelayCheck;
   signal idelay_tap_load    : std_logic;
+  signal EN_VTC             : std_logic;
 
   signal tap_value_in         : integer range 0 to kNumTaps-1;
   signal tap_value_out        : std_logic_vector(kWidthTap-1 downto 0);
+  
+  signal cntvalue_out        : std_logic_vector(kCNTVALUEbit-1 downto 0);
+  signal cntvalue_slave_out        : std_logic_vector(kCNTVALUEbit-1 downto 0);
+ 
+  signal cntvalue_out_level2  : std_logic_vector(kCNTVALUEbit-1 downto 0);
+  signal cntvalue_slave_out_level2  :  std_logic_vector(kCNTVALUEbit-1 downto 0);
+  signal PlateauThreshold_Ultrascale : std_logic_vector(kNumTaps-1 downto 0); 
 
   signal en_idelay_check      : std_logic;
   signal idelay_is_adjusted   : std_logic;
@@ -127,7 +142,58 @@ architecture RTL of CdcmRx is
   attribute mark_debug of tap_value_out   : signal is enDEBUG;
   attribute mark_debug of success_vector   : signal is enDEBUG;
   attribute mark_debug of boudary_vector   : signal is enDEBUG;
+  attribute mark_debug of EN_VTC   : signal is enDEBUG;
+  attribute mark_debug of ready_ctrl   : signal is enDEBUG;
+  attribute mark_debug of PlateauThreshold_Ultrascale  : signal is enDEBUG;
+  
 
+
+    component Cdcm8RxImpl
+        generic (
+            kSysW        : integer := 1;
+            kDevW        : integer := 8;
+            kSelCount    : integer := 3;
+            kDiffTerm    : string  := "TRUE";
+            kRxPolarity  : string  := "FALSE";
+            kIoStandard  : string  := "LVDS";
+            kIoDelayGroup: string  := "cdcm_rx";
+            kFreqRefClk  : integer := 300
+        );
+    
+        Port (
+            dInFromPinP  : in std_logic;
+            dInFromPinN  : in std_logic;
+            
+            rstIDelay    : in std_logic;
+            ceIDelay     : in std_logic;
+            incIDelay    : in std_logic;
+            EN_VTC       : in std_logic;
+            tapIn        : in std_logic_vector(4 downto 0);
+            tapOut       : out std_logic_vector(kWidthTap-1 downto 0);
+            CNTVALUEOUT  : out std_logic_vector(kCNTVALUEbit-1 downto 0);
+            CNTVALUEOUT_slave : out std_logic_vector(kCNTVALUEbit-1 downto 0);
+            
+            cdOutFromO   : out std_logic;
+            dOutToDevice : out std_logic_vector(7 downto 0);
+            bitslip      : in std_logic;
+            
+            clkIn        : in std_logic;
+            clkDivIn     : in std_logic;
+            ioReset      : in std_logic
+        );
+    end component;
+
+    component CalPlateauThreshold_US
+        generic (
+            kFreqFastClk : integer := 500
+        );
+        Port(
+            CLK          : in std_logic;
+            CNTVALUEOUTInit  : in std_logic_vector(kCNTVALUEbit-1 downto 0);
+            CNTVALUEOUT_slaveInit : in std_logic_vector(kCNTVALUEbit-1 downto 0);
+            PlateauThreshold      : out std_logic_vector(kNumTaps-1 downto 0)
+        );
+    end component;        
 
 -- debug ---------------------------------------------------------------
 
@@ -141,21 +207,45 @@ begin
   firstBitPatt  <= first_bit_pattern;
 
   -- ISerDes implementation ---------------------------------------------------------
+  
+  rst_idelayctrl_all <= pwrOnRst or rst_idelayctrl;
+  u_rst_idelayctrl_all : process(clkPar)
+  begin
+    if(clkPar'event and clkPar = '1') then
+      rst_idelayctrl_all_old <= rst_idelayctrl_all;
+    end if;
+  end process;  
+  
+  u_rst_idelayctrl_clkIdelayRef : process(clkIdelayRef)
+  begin
+    if(clkIdelayRef'event and clkIdelayRef = '1') then
+      rst_idelayctrl_clkIdelayRef <= rst_idelayctrl_all_old;
+      rst_idelayctrl_clkIdelayRef_old <= rst_idelayctrl_clkIdelayRef;
+    end if;
+  end process;    
+    
   gen_idelayctrl : if genIDELAYCTRL = TRUE generate
     attribute IODELAY_GROUP of IDELAYCTRL_inst : label is kIoDelayGroup;
   begin
     IDELAYCTRL_inst : IDELAYCTRL
+        generic map (
+            SIM_DEVICE => "ULTRASCALE"  
+      )      
       port map (
         RDY     => ready_ctrl,
         REFCLK  => clkIdelayRef,
-        RST     => pwrOnRst
+        RST     => rst_idelayctrl_clkIdelayRef_old
       );
 
-    rst_all  <= srst or (not ready_ctrl);
+    --rst_all  <= srst or (not ready_ctrl);
+    rst_all  <= srst;
   end generate;
+
+    
 
   nogen : if genIDELAYCTRL = FALSE generate
   begin
+
     rst_all   <= srst;
   end generate;
 
@@ -196,17 +286,21 @@ begin
       );
   end generate;
 
+
   gen_cdcm8 : if kCdcmModWidth = 8 generate
-    u_cdcm_rx_iserdes : entity mylib.Cdcm8RxImpl
+    --u_cdcm_rx_iserdes : entity mylib.Cdcm8RxImpl
+    u_cdcm_rx_iserdes: Cdcm8RxImpl
       generic map
       (
+      
         kSysW         => kWidthSys,
         kDevW         => kWidthDev-2,
-        kDiffTerm     => kDiffTerm,
-        kRxPolarity   => kRxPolarity,
+        kSelCount     => 3,
+        --kDiffTerm     => kDiffTerm,
+        --kRxPolarity   => kRxPolarity,
         kIoStandard   => kIoStandard,
         kIoDelayGroup => kIoDelayGroup,
-        kFreqRefClk   => kFreqRefClk
+        kFreqRefClk   => integer(kFreqRefClk)
       )
       port map
       (
@@ -215,7 +309,8 @@ begin
         dInFromPinN       => RXN,
 
         -- IDELAY
-        rstIDelay         => idelay_reset,
+        --rstIDelay         => idelay_reset,
+        rstIDelay         => idelay_tap_load,
         ceIDelay          => '0',
         incIDelay         => '1',
 
@@ -225,15 +320,33 @@ begin
         bitslip           => en_bitslip,
         tapIn             => std_logic_vector(to_unsigned(tap_value_in, kWidthTap)),
         tapOut            => tap_value_out,
+        CNTVALUEOUT       => cntvalue_out,
+        CNTVALUEOUT_slave => cntvalue_slave_out,
+        
+        EN_VTC            => EN_VTC,
 
         -- Clock and reset
         clkIn             => clkSer,
         clkDivIn          => clkPar,
         ioReset           => serdes_reset
+        --ioReset           => '0'
       );
 
       dout_serdes(0)  <= '1';
       dout_serdes(9)  <= '0';
+      
+      u_CalPlateauThreshold_US: CalPlateauThreshold_US
+      generic map(
+        kFreqFastClk      => integer(kFreqFastClk)
+      )
+      port map
+      (
+        CLK => clkPar,
+        CNTVALUEOUTInit => cntvalue_out_level2,
+        CNTVALUEOUT_slaveInit => cntvalue_slave_out_level2,
+        PlateauThreshold => PlateauThreshold_Ultrascale
+      );
+      
   end generate;
 
   u_bufdout : process(clkPar)
@@ -264,7 +377,8 @@ begin
 
   -- Idelay control -----------------------------------------------------------------
   serdes_reset  <= rst_all or initIn;
-  idelay_reset  <= rst_all or idelay_tap_load;
+  --idelay_reset  <= rst_all or idelay_tap_load;
+  
 
   u_idelay_check : process(clkPar)
   begin
@@ -349,6 +463,9 @@ begin
     end process;
   end generate;
 
+
+
+
   u_ungen : if kFixIdelayTap = FALSE generate
   begin
 
@@ -359,7 +476,10 @@ begin
       variable elapsed_time           : integer range 0 to kMaxIdelayCheck;
       variable decrement_count        : integer range 0 to kNumTaps-1;
       variable wait_count             : integer range 0 to kLoadWait;
+      variable wait_count_EN_VTC      : integer range 0 to kLoadWait;
       variable retry_wait_count       : integer range 0 to kMaxRetryWait;
+      variable wait_RDY_count         : integer range 0 to kWaitRDY;
+      
     begin
       if(clkPar'event and clkPar = '1') then
         if(serdes_reset = '1') then
@@ -373,14 +493,41 @@ begin
           en_idelay_check     <= '0';
           tap_value_in        <= 0;
           idelay_tap_load     <= '0';
+          EN_VTC              <= '1';
+          rst_idelayctrl      <= '0';
 
           success_vector      <= (others => '0');
           boudary_vector      <= (others => '0');
           reg_prev_serdes_out <= (others => '0');
           idelay_is_adjusted  <= '0';
-          state_idelay        <= Init;
+          
+          if(ready_ctrl = '1')then
+            state_idelay        <= wait_RDY;
+          end if;            
         else
           case state_idelay is
+            when wait_RDY =>
+              if(ready_ctrl = '1')then
+                if(wait_RDY_count = kWaitRDY)then
+                  state_idelay      <= IdelayctrlRST;
+                  rst_idelayctrl    <= '1';
+                else  
+                  wait_RDY_count  := wait_RDY_count +1;
+                end if;
+              else
+                wait_RDY_count  := 0;
+              end if;          
+            when IdelayctrlRST =>
+                if(ready_ctrl = '0')then
+                    state_idelay <= IdelayctrlSET;
+                    rst_idelayctrl    <= '0';
+                end if;
+            when IdelayctrlSET =>
+                if(ready_ctrl = '1')then        
+                    cntvalue_out_level2 <=  cntvalue_out;
+                    cntvalue_slave_out_level2 <= cntvalue_slave_out;
+                    state_idelay <= Init;
+                end if;
             when Init =>
               en_idelay_check   <= '1';
               state_idelay      <= Check;
@@ -451,20 +598,37 @@ begin
               elsif(num_idelay_check = kAcceptUnstableLength and unsigned(success_vector(kAcceptUnstableLength-1 downto 0)) = 0) then
                 retry_wait_count  := kMaxIdelayCheck;
                 state_idelay      <= RetryWait;
-              elsif(num_cont_appropriate >= kPlateauThreshold) then
-            --  elsif(to_integer(unsigned(num_cont_appropriate)) >= kPlateauThreshold) then
+              elsif(num_cont_appropriate >= to_integer(unsigned(PlateauThreshold_Ultrascale)))then
                 decrement_count   := integer(num_cont_appropriate/2 +1);
-                state_idelay      <= Decrement;
+                wait_count_EN_VTC      := kLoadWait-1; 
+                state_idelay      <= EN_VTC_change_Decrement;
               else
                 tap_value_in    <= tap_value_in +1;
-                state_idelay    <= Increment;
+                --state_idelay    <= Increment;
+                state_idelay    <= EN_VTC_change_Increment;
+                wait_count_EN_VTC      := kLoadWait-1;
               end if;
+
+            when EN_VTC_change_Increment =>
+              EN_VTC <= '0';
+              wait_count_EN_VTC  := wait_count_EN_VTC-1;
+              if(wait_count_EN_VTC = 0) then
+                state_idelay    <= Increment;
+              end if;              
+
+            when EN_VTC_change_Decrement =>
+              EN_VTC <= '0';
+              wait_count_EN_VTC  := wait_count_EN_VTC-1;
+              if(wait_count_EN_VTC = 0) then
+                state_idelay    <= Decrement;
+              end if;  
 
             when Increment =>
               idelay_tap_load <= '1';
               wait_count      := kLoadWait-1;
               state_idelay    <= WaitState;
-
+              
+              
             when Decrement =>
               tap_value_in    <= tap_value_in -1;
               decrement_count := decrement_count -1;
@@ -478,15 +642,18 @@ begin
               idelay_tap_load <= '0';
               if(wait_count = 0) then
                 en_idelay_check <= '1';
+                EN_VTC <= '1';
                 state_idelay    <= Check;
               end if;
               wait_count  := wait_count-1;
+
 
             when IdelayAdjusted =>
               reg_prev_serdes_out <= (others => '0');
               idelay_tap_load     <= '0';
               if(wait_count = 0) then
                 idelay_is_adjusted  <= '1';
+                EN_VTC <= '1';
               end if;
               wait_count  := wait_count-1;
 
@@ -516,6 +683,8 @@ begin
 
   end generate;
 
+    CNTVALUEOUTInit <= cntvalue_out_level2;
+    CNTVALUEOUT_slaveInit <= cntvalue_slave_out_level2;
 
   -- Bit Slip --------------------------------------------------------------
   u_check_idle : process(clkPar)

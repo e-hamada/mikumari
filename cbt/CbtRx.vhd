@@ -8,6 +8,7 @@ use mylib.defCDCM.all;
 entity CbtRx is
   generic
   (
+    kFamily            : string;
     -- CDCM-RX --
     genIDELAYCTRL      : boolean; -- If TRUE, IDELAYCTRL is instantiated.
     kDiffTerm          : boolean; -- IBUF DIFF_TERM
@@ -42,7 +43,8 @@ entity CbtRx is
     cbtRxUp       : out std_logic; -- Indicate that CDCM-RX is ready for communication.
     tapValueOut   : out std_logic_vector(kWidthTap-1 downto 0); -- IDELAY TAP value output
     bitslipNum    : out std_logic_vector(kWidthBitSlipNum-1 downto 0); -- Number of bitslip made
-
+    CNTVALUEOUTInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);
+    CNTVALUEOUT_slaveInit : out std_logic_vector(kCNTVALUEbit-1 downto 0);    
     -- Error --
     patternErr    : out std_logic; -- Indicates CDCM waveform pattern is collapsed.
     idelayErr     : out std_logic; -- Attempted bitset but the expected pattern was not found.
@@ -441,6 +443,10 @@ begin
       payloadIn   => payload
     );
 
+
+  g_us : if kFamily = "US" generate
+  begin
+
   u_cdcm_rx : entity mylib.CdcmRx
     generic map
     (
@@ -472,6 +478,8 @@ begin
       cdcmUpRx      => cdcm_rx_up,
       tapValueOut   => tapValueOut,
       bitslipNum    => bitslipNum,
+      CNTVALUEOUTInit => CNTVALUEOUTInit,
+      CNTVALUEOUT_slaveInit => CNTVALUEOUT_slaveInit,
 
       -- Error status --
       idelayErr     => idelayErr,
@@ -484,5 +492,58 @@ begin
       modClock      => modClock,
       payloadOut    => payload
     );
+end generate;
+
+  g_7s : if kFamily = "7S" generate
+  begin
+
+  u_cdcm_rx : entity mylib.CdcmRx_7s
+    generic map
+    (
+      genIDELAYCTRL      => genIDELAYCTRL,
+      kDiffTerm          => kDiffTerm,
+      kRxPolarity        => kRxPolarity,
+      kIoStandard        => kIoStandard,
+      kIoDelayGroup      => kIoDelayGroup,
+      kFixIdelayTap      => kFixIdelayTap,
+      kCdcmModWidth      => kCdcmModWidth,
+      kFreqFastClk       => kFreqFastClk,
+      kFreqRefClk        => kFreqRefClk,
+      enDEBUG            => enDEBUG
+    )
+    port map
+    (
+      -- SYSTEM port --
+      srst          => srst,
+      pwrOnRst      => pwrOnRst,
+      clkSer        => clkSer,
+      clkPar        => clkPar,
+      clkIdelayRef  => clkIdelayRef,
+      initIn        => init_rx,
+      tapValueIn    => tapValueIn,
+      firstBitPatt  => firstBitPatt,
+
+      -- Status --
+      statusInit    => status_init,
+      cdcmUpRx      => cdcm_rx_up,
+      tapValueOut   => tapValueOut,
+      bitslipNum    => bitslipNum,
+      CNTVALUEOUTInit => CNTVALUEOUTInit,
+      CNTVALUEOUT_slaveInit => CNTVALUEOUT_slaveInit,
+
+      -- Error status --
+      idelayErr     => idelayErr,
+      bitslipErr    => bitslipErr,
+      patternErr    => cdcm_patt_error,
+
+      -- CDCM input ports
+      RXP           => cdcmRxp,
+      RXN           => cdcmRxn,
+      modClock      => modClock,
+      payloadOut    => payload
+    );
+end generate;
+
+
 
 end RTL;
